@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Constellation: Your body has a shape</title>
+<style>
+  :root{
+    --bg-0:#05060a;
+    --bg-1:#0b0e18;
+    --bg-2:#12172a;
+    --ink-0:#f4f1ea;
+    --ink-1:#c9c9d4;
+    --ink-2:#8a8b9c;
+    --line:rgba(255,255,255,0.09);
+    --panel:rgba(14,16,28,0.66);
+    --warm:hsl(14,82%,62%);
+    --cool:hsl(190,70%,66%);
+    --rose:hsl(352,38%,58%);
+    --violet:hsl(256,46%,68%);
+    --neutral:hsl(0,0%,78%);
+    --gold:hsl(38,72%,62%);
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+    background:var(--bg-0);
+    font-family:var(--font-display);
+    color:var(--ink-0);
+    -webkit-font-smoothing:antialiased;
+  }
+  #stage{position:fixed; inset:0; background:
+      radial-gradient(ellipse 80% 60% at 50% 20%, rgba(60,50,90,0.28), transparent 60%),
+      radial-gradient(ellipse 70% 70% at 80% 90%, rgba(30,60,70,0.20), transparent 60%),
+      radial-gradient(ellipse 60% 60% at 10% 85%, rgba(70,30,45,0.16), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1) 55%, #08090f 100%);
+  }
+  canvas{position:fixed; inset:0; width:100%; height:100%; cursor:default;}
+  .noise{position:fixed; inset:0; pointer-events:none; opacity:0.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- chrome ---------- */
+  .chrome-top{position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center;
+    padding:22px 28px; pointer-events:none; z-index:20;}
+  .brand{font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:var(--ink-2); font-weight:500;}
+  .badge{font-size:11px; letter-spacing:0.05em; color:var(--ink-2); background:rgba(255,255,255,0.04);
+    border:1px solid var(--line); padding:6px 12px; border-radius:100px; pointer-events:auto;}
+  .badge b{color:var(--ink-1); font-weight:600;}
+
+  /* ---------- landing ---------- */
+  #landing{position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:34px; z-index:15; transition:opacity 900ms ease, filter 900ms ease; text-align:center; padding:0 24px;
+    opacity:0; filter:blur(8px); pointer-events:none;}
+  #landing.show{opacity:1; filter:blur(0); pointer-events:auto;}
+  #landing h1{font-size:clamp(28px,4.4vw,52px); font-weight:560; letter-spacing:-0.01em; margin:0; line-height:1.15;
+    max-width:16em;}
+  #landing .sub{font-size:14px; color:var(--ink-2); max-width:34em; margin-top:-18px; line-height:1.6;}
+  .actions{display:flex; gap:14px; flex-wrap:wrap; justify-content:center;}
+  button{font-family:inherit; cursor:pointer;}
+  .pill{background:rgba(255,255,255,0.045); border:1px solid var(--line); color:var(--ink-0);
+    padding:14px 26px; border-radius:100px; font-size:14px; letter-spacing:0.02em; transition:all 220ms ease;
+    backdrop-filter:blur(6px);}
+  .pill:hover{background:rgba(255,255,255,0.09); border-color:rgba(255,255,255,0.22); transform:translateY(-1px);}
+  .pill.ghost{background:transparent;}
+  .pill.primary{background:rgba(255,255,255,0.10); border-color:rgba(255,255,255,0.28);}
+
+  /* ---------- checkin panel ---------- */
+  #checkin{position:fixed; left:50%; bottom:64px; transform:translateX(-50%) translateY(20px); width:min(560px,90vw);
+    background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:20px; z-index:30;
+    backdrop-filter:blur(16px); opacity:0; pointer-events:none; transition:opacity 380ms ease, transform 380ms ease;}
+  #checkin.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+  #checkin textarea{width:100%; min-height:88px; resize:none; background:transparent; border:none; outline:none;
+    color:var(--ink-0); font-family:inherit; font-size:15px; line-height:1.5;}
+  #checkin textarea::placeholder{color:var(--ink-2);}
+  .mic-row{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--ink-2); margin-bottom:8px; letter-spacing:0.04em;}
+  .mic-dot{width:8px; height:8px; border-radius:50%; background:var(--warm); animation:pulseDot 1.1s infinite ease-in-out;}
+  @keyframes pulseDot{0%,100%{opacity:0.35; transform:scale(0.85);} 50%{opacity:1; transform:scale(1.15);}}
+  .checkin-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:10px;}
+  .link-btn{background:none; border:none; color:var(--ink-2); font-size:12px; padding:8px 10px;}
+  .link-btn:hover{color:var(--ink-0);}
+  .small-pill{background:rgba(255,255,255,0.07); border:1px solid var(--line); color:var(--ink-0);
+    padding:9px 18px; border-radius:100px; font-size:13px;}
+  .small-pill:hover{background:rgba(255,255,255,0.14);}
+
+  /* ---------- extraction chips ---------- */
+  #extractLayer{position:fixed; left:50%; bottom:170px; transform:translateX(-50%); display:flex;
+    flex-direction:column; align-items:center; gap:10px; pointer-events:none; z-index:28;}
+  .chip{padding:8px 14px; border-radius:100px; font-size:12.5px; letter-spacing:0.01em;
+    background:rgba(20,22,36,0.85); border:1px solid rgba(255,255,255,0.16); color:var(--ink-0);
+    white-space:nowrap; box-shadow:0 8px 30px rgba(0,0,0,0.35); opacity:0; transform:scale(0.85);
+    transition:opacity 420ms ease, transform 420ms ease;}
+  .chip.in{opacity:1; transform:scale(1);}
+  .chip.fly{position:fixed; margin:0; opacity:0; transform:translate(-50%,-50%) scale(0.35);
+    transition:opacity 420ms ease, transform 420ms ease, top 900ms cubic-bezier(.6,0,.3,1), left 900ms cubic-bezier(.6,0,.3,1);}
+  .chip .dot{display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:8px; vertical-align:middle;}
+
+  /* ---------- timeline ---------- */
+  #timeline{position:fixed; left:50%; bottom:34px; transform:translateX(-50%); z-index:22;
+    display:flex; flex-direction:column; align-items:center; gap:10px; opacity:0; pointer-events:none;
+    transition:opacity 700ms ease;}
+  #timeline.show{opacity:1; pointer-events:auto;}
+  .tl-hint{font-size:12px; color:var(--ink-2); letter-spacing:0.03em; opacity:0; transition:opacity 600ms ease; height:14px;}
+  .tl-hint.show{opacity:1;}
+  .tl-track{position:relative; display:flex; gap:0; background:rgba(255,255,255,0.03); border:1px solid var(--line);
+    border-radius:100px; padding:5px; backdrop-filter:blur(10px);}
+  .tl-step{position:relative; z-index:2; padding:9px 18px; font-size:12.5px; color:var(--ink-2); border-radius:100px;
+    letter-spacing:0.03em; transition:color 300ms ease; background:none; border:none;}
+  .tl-step.active{color:var(--bg-0);}
+  .tl-thumb{position:absolute; top:5px; left:5px; height:calc(100% - 10px); border-radius:100px;
+    background:linear-gradient(120deg,#f4f1ea,#cfd0da); transition:transform 480ms cubic-bezier(.6,0,.3,1), width 480ms cubic-bezier(.6,0,.3,1); z-index:1;}
+
+  /* ---------- pattern alert ---------- */
+  #patternAlert{position:fixed; z-index:26; display:flex; align-items:center; gap:10px; padding:12px 18px;
+    background:rgba(20,16,10,0.7); border:1px solid rgba(255,200,120,0.35); border-radius:100px; cursor:pointer;
+    opacity:0; transform:scale(0.9); transition:opacity 600ms ease, transform 600ms ease; box-shadow:0 0 40px rgba(255,180,90,0.12);}
+  #patternAlert.show{opacity:1; transform:scale(1);}
+  #patternAlert .ring{width:9px; height:9px; border-radius:50%; background:var(--gold); box-shadow:0 0 14px 3px rgba(240,180,90,0.7);
+    animation:pulseDot 1.3s infinite ease-in-out;}
+  #patternAlert span{font-size:13px; letter-spacing:0.02em;}
+
+  /* ---------- modals ---------- */
+  .modal-scrim{position:fixed; inset:0; background:rgba(3,4,8,0.55); backdrop-filter:blur(3px); z-index:40;
+    opacity:0; pointer-events:none; transition:opacity 320ms ease;}
+  .modal-scrim.show{opacity:1; pointer-events:auto;}
+  .modal{position:fixed; left:50%; top:50%; transform:translate(-50%,-46%); width:min(480px,88vw); max-height:78vh;
+    overflow:auto; background:linear-gradient(180deg, rgba(20,22,34,0.92), rgba(12,13,22,0.94)); border:1px solid var(--line);
+    border-radius:22px; padding:30px; z-index:41; opacity:0; pointer-events:none; transition:opacity 340ms ease, transform 340ms ease;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5);}
+  .modal.show{opacity:1; transform:translate(-50%,-50%); pointer-events:auto;}
+  .modal .eyebrow{font-size:11px; text-transform:uppercase; letter-spacing:0.14em; color:var(--ink-2); margin-bottom:10px;}
+  .modal h2{font-size:22px; font-weight:560; margin:0 0 14px; line-height:1.3;}
+  .modal p{font-size:14.5px; line-height:1.65; color:var(--ink-1); margin:0 0 12px;}
+  .modal .caveat{font-size:13px; color:var(--ink-2); font-style:italic; border-left:2px solid var(--line); padding-left:12px; margin:16px 0;}
+  .modal ul{margin:0 0 14px; padding-left:18px; color:var(--ink-1); font-size:14px; line-height:1.75;}
+  .modal .row-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:20px;}
+  .modal .close-x{position:absolute; top:18px; right:20px; background:none; border:none; color:var(--ink-2); font-size:18px;}
+  .modal .close-x:hover{color:var(--ink-0);}
+  .option-grid{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
+  .option-row{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border:1px solid var(--line);
+    border-radius:14px; background:rgba(255,255,255,0.02); transition:all 200ms ease; text-align:left;}
+  .option-row:hover{background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.2);}
+  .option-row .arrow{opacity:0.4;}
+  .node-tag{display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-2); margin-bottom:16px;}
+  .node-tag .swatch{width:8px; height:8px; border-radius:50%;}
+
+  /* ---------- tooltip ---------- */
+  #tooltip{position:fixed; z-index:25; pointer-events:none; padding:8px 12px; border-radius:10px; font-size:12px;
+    background:rgba(14,15,24,0.92); border:1px solid var(--line); color:var(--ink-0); opacity:0; transition:opacity 140ms ease;
+    transform:translate(-50%,-130%); white-space:nowrap; box-shadow:0 6px 20px rgba(0,0,0,0.4);}
+  #tooltip.show{opacity:1;}
+  #tooltip .t2{color:var(--ink-2); font-size:11px; margin-top:2px;}
+
+  /* ---------- community toggle ---------- */
+  #community{position:fixed; right:26px; bottom:30px; z-index:21; text-align:right; opacity:0; transform:translateY(10px);
+    transition:opacity 700ms ease, transform 700ms ease; max-width:260px;}
+  #community.show{opacity:1; transform:translateY(0);}
+  #community p{font-size:12.5px; color:var(--ink-2); line-height:1.5; margin:0 0 8px;}
+  #community.expanded p{color:var(--ink-2);}
+
+  /* ---------- footer note ---------- */
+  #synthNote{position:fixed; left:26px; bottom:26px; z-index:15; font-size:11px; color:var(--ink-2); max-width:230px;
+    line-height:1.5; opacity:0.75;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15); border-radius:10px;}
+
+  @media (max-width:640px){
+    .chrome-top{padding:16px;}
+    #landing h1{font-size:26px;}
+    .actions{flex-direction:column; width:100%;}
+    .pill{width:100%;}
+    #community{display:none;}
+    #synthNote{max-width:180px; font-size:10px;}
+    .modal{padding:22px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+<canvas id="cv"></canvas>
+<div class="noise"></div>
+
+<div class="chrome-top">
+  <div class="brand">Constellation</div>
+  <div class="badge">● <b>Synthetic demo data</b> (prototype, not medical software)</div>
+</div>
+
+<div id="landing" class="show">
+  <h1>How does your body feel today?</h1>
+  <div class="sub">Not a tracker. Not a dashboard. A living map of what your body has been telling you.</div>
+  <div class="actions">
+    <button class="pill primary" id="btnTalk">Talk</button>
+    <button class="pill" id="btnType">Type</button>
+    <button class="pill ghost" id="btnExplore">Explore my body</button>
+  </div>
+</div>
+
+<div id="checkin">
+  <div class="mic-row" id="micRow" style="display:none;"><span class="mic-dot"></span> Listening…</div>
+  <textarea id="checkinText" placeholder="My period started yesterday. I'm exhausted today and my lower back hurts…"></textarea>
+  <div class="checkin-actions">
+    <button class="link-btn" id="btnExample">Use example</button>
+    <button class="link-btn" id="btnCancelCheckin">Cancel</button>
+    <button class="small-pill" id="btnSubmitCheckin">Add to my constellation</button>
+  </div>
+</div>
+
+<div id="extractLayer"></div>
+
+<div id="timeline">
+  <div class="tl-hint" id="tlHint">Scrub through time to see the full picture →</div>
+  <div class="tl-track" id="tlTrack">
+    <div class="tl-thumb" id="tlThumb"></div>
+    <button class="tl-step" data-range="today">Today</button>
+    <button class="tl-step" data-range="week">Week</button>
+    <button class="tl-step" data-range="month">Month</button>
+    <button class="tl-step" data-range="3m">3 Months</button>
+    <button class="tl-step" data-range="6m">6 Months</button>
+  </div>
+</div>
+
+<div id="patternAlert"><span class="ring"></span><span>I found something.</span></div>
+
+<div id="community">
+  <p id="communityText">You're not the only constellation like this.</p>
+  <button class="link-btn" id="btnCommunity" style="color:var(--ink-0); border:1px solid var(--line); border-radius:100px; padding:7px 14px;">Explore</button>
+</div>
+
+<div id="synthNote">All health data shown is synthetic demo data generated for this prototype: no real observations.</div>
+
+<div id="tooltip"></div>
+
+<div class="modal-scrim" id="scrim"></div>
+
+<div class="modal" id="modalPattern">
+  <button class="close-x" data-close>✕</button>
+  <div class="eyebrow">Pattern observed</div>
+  <h2 id="patHeadline">I noticed a pattern.</h2>
+  <p id="patBody"></p>
+  <div class="caveat" id="patCaveat"></div>
+  <div class="row-actions">
+    <button class="small-pill" id="btnShowMe">Show me</button>
+    <button class="link-btn" data-close>Not now</button>
+  </div>
+</div>
+
+<div class="modal" id="modalSupport">
+  <button class="close-x" data-close>✕</button>
+  <div class="node-tag"><span class="swatch" id="supSwatch"></span><span id="supTag">Pelvic pain · 8/10</span></div>
+  <h2>What do you need right now?</h2>
+  <div class="option-grid">
+    <button class="option-row" data-need="understand"><span>Understand this</span><span class="arrow">→</span></button>
+    <button class="option-row" data-need="feel-better"><span>Feel better</span><span class="arrow">→</span></button>
+    <button class="option-row" data-need="acknowledge"><span>Just acknowledge it</span><span class="arrow">→</span></button>
+    <button class="option-row" data-need="doctor"><span>Prepare for my doctor</span><span class="arrow">→</span></button>
+  </div>
+</div>
+
+<div class="modal" id="modalDetail">
+  <button class="close-x" data-close>✕</button>
+  <div class="eyebrow" id="detEyebrow">Understand this</div>
+  <h2 id="detHeadline"></h2>
+  <div id="detBody"></div>
+  <div class="row-actions">
+    <button class="link-btn" data-close>Close</button>
+  </div>
+</div>
+
+<div class="modal" id="modalInfo">
+  <button class="close-x" data-close>✕</button>
+  <div class="eyebrow" id="infoEyebrow">Context</div>
+  <h2 id="infoHeadline"></h2>
+  <p id="infoBody"></p>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================================
+   CONSTELLATION: v0 prototype for Claude Build Day, Ibero, Fall 2026
+   Architecture: RAW OBSERVATIONS → STRUCTURED SIGNALS → RELATIONSHIPS → PATTERNS
+                 → INSIGHTS → VISUAL REPRESENTATION
+   All data below is synthetic. Nothing in this file diagnoses, and nothing here
+   should be mistaken for medical software.
+===================================================================================== */
+
+/* ---------------------------------------------------------------------------------
+   0. SEEDED RANDOM: deterministic so the "wow moment" always lands in the same
+   place during a live demo, regardless of when it's opened.
+--------------------------------------------------------------------------------- */
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(90210);
+const rr = (min, max) => min + rng() * (max - min);
+const ri = (min, max) => Math.floor(rr(min, max + 1));
+const chance = (p) => rng() < p;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const DAY_MS = 86400000;
+
+/* ---------------------------------------------------------------------------------
+   1. DATA LAYER: the conceptual model. Each class is a small, honest struct;
+   nothing here is UI. This is what a real backend would eventually persist.
+--------------------------------------------------------------------------------- */
+
+// Domains a symptom/context can belong to. Position on screen, not color, is what
+// primarily encodes domain (see LAYOUT below).
+const Domain = { CYCLE:'CYCLE', BODY:'BODY', ENERGY:'ENERGY', MIND:'MIND', EMOTIONS:'EMOTIONS', CONTEXT:'CONTEXT' };
+
+// CyclePhase: derived from cycle day, never asserted by the user directly.
+const CyclePhase = { MENSTRUAL:'menstrual', FOLLICULAR:'follicular', OVULATION:'ovulation', LUTEAL:'luteal' };
+
+// Definitions for every signal type the system understands. `valence` drives glow
+// color (warm=difficult, cool=easeful, violet=rest-disrupting, rose=cycle, neutral=context);
+// intentionally NOT a 1:1 category→color map; domain still drives position.
+const SYMPTOM_DEFS = {
+  bleeding:          { domain: Domain.CYCLE,    label: 'Bleeding',              valence: 'rose'    },
+  ovulation:         { domain: Domain.CYCLE,    label: 'Ovulation window',      valence: 'rose'    },
+  pelvicPain:        { domain: Domain.BODY,     label: 'Pelvic pain',           valence: 'warm'    },
+  cramps:            { domain: Domain.BODY,     label: 'Cramps',                valence: 'warm'    },
+  bloating:          { domain: Domain.BODY,     label: 'Bloating',              valence: 'warm'    },
+  headache:          { domain: Domain.BODY,     label: 'Headache',              valence: 'warm'    },
+  digestive:         { domain: Domain.BODY,     label: 'Digestive discomfort',  valence: 'warm'    },
+  breastTenderness:  { domain: Domain.BODY,     label: 'Breast tenderness',     valence: 'warm'    },
+  backPain:          { domain: Domain.BODY,     label: 'Back pain',             valence: 'warm'    },
+  fatigue:           { domain: Domain.ENERGY,   label: 'Fatigue',               valence: 'warm'    },
+  energy:            { domain: Domain.ENERGY,   label: 'Energy',                valence: 'cool'    },
+  sleep:             { domain: Domain.ENERGY,   label: 'Sleep quality',         valence: 'violet'  },
+  stress:            { domain: Domain.MIND,     label: 'Stress',                valence: 'warm'    },
+  anxiety:           { domain: Domain.MIND,     label: 'Anxiety',               valence: 'warm'    },
+  irritability:      { domain: Domain.MIND,     label: 'Irritability',          valence: 'warm'    },
+  mentalClarity:     { domain: Domain.MIND,     label: 'Mental clarity',        valence: 'cool'    },
+  sadness:           { domain: Domain.EMOTIONS, label: 'Sadness',               valence: 'warm'    },
+  joy:               { domain: Domain.EMOTIONS, label: 'Joy',                   valence: 'cool'    },
+  sensitivity:       { domain: Domain.EMOTIONS, label: 'Emotional sensitivity', valence: 'warm'    },
+  overwhelm:         { domain: Domain.EMOTIONS, label: 'Overwhelm',             valence: 'warm'    },
+  exercise:          { domain: Domain.CONTEXT,  label: 'Exercise',              valence: 'neutral' },
+  sex:               { domain: Domain.CONTEXT,  label: 'Intimacy',              valence: 'neutral' },
+  medication:        { domain: Domain.CONTEXT,  label: 'Medication',            valence: 'neutral' },
+  food:              { domain: Domain.CONTEXT,  label: 'Food / cravings',       valence: 'neutral' },
+  workload:          { domain: Domain.CONTEXT,  label: 'Workload',              valence: 'neutral' },
+  social:            { domain: Domain.CONTEXT,  label: 'Social activity',       valence: 'neutral' },
+};
+
+// A single reported thing on a single day: the "structured signal" that is
+// the output of parsing either the synthetic generator or a live check-in.
+class Symptom {
+  constructor(type, value, date, opts = {}) {
+    this.id = `${type}-${date.getTime()}-${Math.random().toString(36).slice(2,7)}`;
+    this.type = type;
+    this.value = value; // 0-10 intensity, or quality for `sleep`
+    this.date = date;
+    this.def = SYMPTOM_DEFS[type];
+    this.note = opts.note || '';
+    this.cycleDay = opts.cycleDay ?? null;
+    this.phase = opts.phase || null;
+  }
+}
+
+// A raw, unstructured entry: what the user actually said. Parsed into Symptoms.
+class Observation {
+  constructor(text, date) { this.id = 'obs-' + date.getTime(); this.text = text; this.date = date; }
+}
+
+// A context event (not a "symptom" per se: exercise, sex, medication, etc).
+class ContextEvent extends Symptom {}
+
+// An edge between two structured signals that co-occurred meaningfully.
+class Relationship {
+  constructor(typeA, typeB, strength) { this.typeA = typeA; this.typeB = typeB; this.strength = strength; }
+}
+
+// A detected recurring co-occurrence across multiple days/cycles.
+class Pattern {
+  constructor(types, days, cyclesInvolved) {
+    this.id = 'pattern-' + types.join('-');
+    this.types = types;
+    this.days = days;                 // array of day-records where it held
+    this.cyclesInvolved = cyclesInvolved;
+  }
+}
+
+// Human-facing, deliberately non-diagnostic language wrapping a Pattern.
+class Insight {
+  constructor(pattern, headline, body, caveat) {
+    this.pattern = pattern; this.headline = headline; this.body = body; this.caveat = caveat;
+  }
+}
+
+// The visual atom. Everything the renderer touches lives here; this is the only
+// class that knows about pixels.
+class ConstellationNode {
+  constructor(symptom, region) {
+    this.symptom = symptom;
+    this.domain = symptom.def.domain;
+    const jitter = region.spreadFor(symptom.type, symptom.date.getTime());
+    this.baseAngle = jitter.angle;
+    this.baseRadius = jitter.radius;
+    this.phase = rr(0, Math.PI * 2);
+    this.floatAmp = rr(4, 11);
+    this.floatSpeed = rr(0.25, 0.55);
+    this.x = 0; this.y = 0;
+    this.bornAt = null;       // set when revealed: drives the pulse-in animation
+    this.highlighted = false;
+    this.highlightUntil = 0;
+  }
+  get isDifficult() {
+    const v = this.symptom.def.valence;
+    if (this.domain === Domain.CONTEXT) return false;
+    if (this.symptom.type === 'sleep') return this.symptom.value <= 4;
+    return (v === 'warm') && this.symptom.value >= 5;
+  }
+}
+
+/* ---------------------------------------------------------------------------------
+   2. DEMO DATA GENERATOR: RAW OBSERVATIONS → STRUCTURED SIGNALS
+   Produces ~6 synthetic cycles of daily signals with a few deliberately hidden
+   correlations, so the pattern engine below has something real to find.
+--------------------------------------------------------------------------------- */
+const today = new Date(); today.setHours(0,0,0,0);
+const CYCLE_LENGTHS = [24, 21]; // chronological, oldest first: 2 completed cycles, 45 days of seeded history
+const currentCycleStart = new Date(today.getTime() - 1 * DAY_MS); // "period started yesterday"
+
+const cycles = []; // {start, length, index}
+{
+  let cursor = new Date(currentCycleStart);
+  for (let i = CYCLE_LENGTHS.length - 1; i >= 0; i--) {
+    cursor = new Date(cursor.getTime() - CYCLE_LENGTHS[i] * DAY_MS);
+    cycles.unshift({ start: new Date(cursor), length: CYCLE_LENGTHS[i], index: i });
+  }
+  cycles.push({ start: currentCycleStart, length: null, index: cycles.length }); // ongoing
+}
+
+function phaseForCycleDay(day, length) {
+  const ov = Math.max(11, length - 14);
+  if (day <= 5) return CyclePhase.MENSTRUAL;
+  if (day < ov) return CyclePhase.FOLLICULAR;
+  if (day <= ov + 1) return CyclePhase.OVULATION;
+  return CyclePhase.LUTEAL;
+}
+
+// Every completed cycle's day-by-day synthetic record, EXCLUDING the ongoing
+// cycle (which starts empty: it's filled in live by the check-in demo).
+const history = []; // { date, cycleIndex, cycleDay, length, phase, symptoms:{type:value} }
+cycles.forEach((cyc, ci) => {
+  if (cyc.length === null) return; // ongoing cycle: no pre-seeded data
+  for (let day = 1; day <= cyc.length; day++) {
+    const date = new Date(cyc.start.getTime() + (day - 1) * DAY_MS);
+    if (date >= today) continue;
+    const phase = phaseForCycleDay(day, cyc.length);
+    const rec = { date, cycleIndex: ci, cycleDay: day, length: cyc.length, phase, symptoms: {} };
+    const set = (type, value) => { if (value > 0) rec.symptoms[type] = clamp(Math.round(value), 0, 10); };
+
+    if (phase === CyclePhase.MENSTRUAL) {
+      const flow = day <= 2 ? rr(6,9) : day <= 4 ? rr(3,6) : rr(1,3);
+      set('bleeding', flow);
+      set('cramps', rr(3,8));
+      set('pelvicPain', rr(2,6));
+      set('backPain', rr(1,5));
+      set('fatigue', rr(4,8));
+      set('bloating', rr(2,6));
+      if (chance(0.3)) set('digestive', rr(2,5));
+      if (chance(0.5)) set('medication', rr(3,7));
+      set('sleep', rr(4,7));
+    } else if (phase === CyclePhase.FOLLICULAR) {
+      set('energy', rr(5,9));
+      set('mentalClarity', rr(5,9));
+      if (chance(0.45)) set('joy', rr(4,8));
+      set('sleep', rr(6,9));
+      if (chance(0.4)) set('exercise', rr(3,8));
+      if (chance(0.15)) set('social', rr(3,7));
+    } else if (phase === CyclePhase.OVULATION) {
+      set('energy', rr(6,9));
+      if (chance(0.55)) set('headache', rr(5,8)); // secondary hidden correlation
+      if (chance(0.5)) set('exercise', rr(4,8));
+      if (chance(0.3)) set('sex', rr(3,7));
+      set('sleep', rr(6,8));
+    } else { // LUTEAL
+      set('bloating', rr(3,7));
+      set('breastTenderness', rr(2,6));
+      set('irritability', rr(2,6));
+      set('anxiety', rr(1,5));
+      if (chance(0.35)) set('sadness', rr(2,5));
+      if (chance(0.4)) set('sensitivity', rr(3,6));
+      set('sleep', rr(3,7));
+      set('fatigue', rr(3,7));
+      if (chance(0.3)) set('food', rr(3,7));
+      if (chance(0.25)) set('workload', rr(4,8));
+      if (chance(0.2)) set('overwhelm', rr(3,6));
+      set('pelvicPain', rr(1,4));
+    }
+    history.push(rec);
+  }
+});
+
+// --- Deliberate, guaranteed pattern -----------------------------------------
+// "Pelvic pain, fatigue and poor sleep together on 4 days during the last two
+// completed cycles": engineered so the pattern engine below will always find
+// exactly this as the strongest signal, matching the product spec's example.
+const completed = cycles.filter(c => c.length !== null);
+const lastTwo = completed.slice(-2);
+const patternDays = [];
+lastTwo.forEach(cyc => {
+  [cyc.length - 3, cyc.length - 2].forEach(day => {
+    const date = new Date(cyc.start.getTime() + (day - 1) * DAY_MS);
+    const rec = history.find(h => h.date.getTime() === date.getTime());
+    if (!rec) return;
+    rec.symptoms.pelvicPain = ri(8,9);
+    rec.symptoms.fatigue = ri(7,8);
+    rec.symptoms.sleep = ri(2,3);
+    // Keep these days a clean signal for pelvicPain+fatigue+sleep specifically:
+    // suppress any other candidate symptom that would otherwise clear the
+    // co-occurrence threshold and dilute (or outrank) the engineered pattern.
+    ['cramps','bloating','headache','backPain','anxiety','sensitivity','irritability','overwhelm','sadness']
+      .forEach(t => { if (rec.symptoms[t] !== undefined) rec.symptoms[t] = ri(1,3); });
+    patternDays.push(rec);
+  });
+});
+
+/* ---------------------------------------------------------------------------------
+   3. RELATIONSHIP + PATTERN ENGINE: STRUCTURED SIGNALS → RELATIONSHIPS → PATTERNS
+   Generic co-occurrence search, not a hardcoded string. It will surface the
+   engineered pattern above because it is, honestly, the strongest one in the data.
+--------------------------------------------------------------------------------- */
+const CANDIDATE_TYPES = ['pelvicPain','fatigue','sleep','cramps','bloating','headache','backPain',
+  'anxiety','sensitivity','irritability','overwhelm','sadness'];
+
+function meetsCondition(rec, type) {
+  const v = rec.symptoms[type];
+  if (v === undefined) return false;
+  return type === 'sleep' ? v <= 4 : v >= 6;
+}
+
+function combinations(arr, k) {
+  const out = [];
+  (function go(start, combo){
+    if (combo.length === k) { out.push(combo.slice()); return; }
+    for (let i = start; i < arr.length; i++) { combo.push(arr[i]); go(i+1, combo); combo.pop(); }
+  })(0, []);
+  return out;
+}
+
+function detectPatterns() {
+  const results = [];
+  [3,2].forEach(k => {
+    combinations(CANDIDATE_TYPES, k).forEach(combo => {
+      const days = history.filter(rec => combo.every(t => meetsCondition(rec, t)));
+      if (days.length >= 3) {
+        const cyclesInvolved = [...new Set(days.map(d => d.cycleIndex))];
+        results.push(new Pattern(combo, days, cyclesInvolved));
+      }
+    });
+  });
+  // A richer (triple) co-occurrence is a more interesting insight than a noisier
+  // pairwise one, even if the pair happens to recur on more individual days:
+  // combo size wins the ranking first, day-count only breaks ties within it.
+  results.sort((a,b) => (b.types.length - a.types.length) || (b.days.length - a.days.length));
+  return results;
+}
+const patterns = detectPatterns();
+const primaryPattern = patterns[0] || null;
+
+function joinWithAnd(list) {
+  if (list.length <= 1) return list.join('');
+  if (list.length === 2) return list.join(' and ');
+  return list.slice(0,-1).join(', ') + ' and ' + list[list.length-1];
+}
+
+function labelFor(type) { return type === 'sleep' ? 'poor sleep' : SYMPTOM_DEFS[type].label.toLowerCase(); }
+
+function buildPatternInsight(pattern) {
+  const niceList = joinWithAnd(pattern.types.map(labelFor));
+  const cyclesText = pattern.cyclesInvolved.length <= 2 ? 'the last two cycles' : `the last ${pattern.cyclesInvolved.length} cycles`;
+  return new Insight(
+    pattern,
+    'I noticed a pattern.',
+    `You reported ${niceList} together on ${pattern.days.length} days during ${cyclesText}.`,
+    "This doesn't necessarily mean they're causally related, but the pattern may be worth watching. Consider discussing it with a healthcare professional."
+  );
+}
+
+function buildDoctorSummary(type) {
+  const occurrences = history.filter(rec => type === 'sleep' ? (rec.symptoms.sleep !== undefined && rec.symptoms.sleep <= 4) : (rec.symptoms[type] !== undefined && rec.symptoms[type] >= 3));
+  const count = occurrences.length;
+  const avg = count ? (occurrences.reduce((s,r)=>s+r.symptoms[type],0) / count) : 0;
+  const cooccur = {};
+  occurrences.forEach(rec => CANDIDATE_TYPES.forEach(t => { if (t !== type && meetsCondition(rec, t)) cooccur[t] = (cooccur[t]||0) + 1; }));
+  const topCooccur = Object.entries(cooccur).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([t])=>labelFor(t));
+  const phaseTally = {};
+  occurrences.forEach(rec => { phaseTally[rec.phase] = (phaseTally[rec.phase]||0) + 1; });
+  const topPhase = Object.entries(phaseTally).sort((a,b)=>b[1]-a[1])[0];
+  return { count, avg: avg.toFixed(1), topCooccur, topPhase: topPhase ? topPhase[0] : null, cyclesSpan: completed.length };
+}
+
+/* ---------------------------------------------------------------------------------
+   4. VISUAL LAYOUT: region geometry for the six domain clusters.
+--------------------------------------------------------------------------------- */
+const REGION_ORDER = [Domain.CYCLE, Domain.BODY, Domain.ENERGY, Domain.MIND, Domain.EMOTIONS, Domain.CONTEXT];
+const REGION_LABELS = { CYCLE:'Cycle', BODY:'Body', ENERGY:'Energy', MIND:'Mind', EMOTIONS:'Emotions', CONTEXT:'Context' };
+
+const Layout = {
+  w: 0, h: 0, cx: 0, cy: 0, R: 0,
+  centers: {},
+  resize(w, h) {
+    this.w = w; this.h = h; this.cx = w * 0.5; this.cy = h * 0.52;
+    this.R = Math.min(w, h) * (w < 720 ? 0.24 : 0.30);
+    REGION_ORDER.forEach((dom, i) => {
+      const angle = -Math.PI/2 + i * (Math.PI * 2 / REGION_ORDER.length);
+      this.centers[dom] = {
+        x: this.cx + Math.cos(angle) * this.R,
+        y: this.cy + Math.sin(angle) * this.R,
+        angle
+      };
+    });
+  },
+  spreadFor(domain) {
+    const c = this.centers[domain];
+    const angle = rr(0, Math.PI*2);
+    const radius = rr(0, this.R * 0.42);
+    return { angle, radius, cx: c.x, cy: c.y };
+  }
+};
+// small shim so ConstellationNode can call region.spreadFor(type, seed) uniformly
+const RegionAdapter = { spreadFor(type, seed) {
+  const dom = SYMPTOM_DEFS[type].domain;
+  const s = Layout.spreadFor(dom);
+  return s;
+}};
+
+function colorFor(node, alpha) {
+  const v = node.symptom.def.valence;
+  const intensity = node.symptom.type === 'sleep' ? (10 - node.symptom.value) : node.symptom.value;
+  const t = clamp(intensity / 10, 0.15, 1);
+  const table = {
+    warm:    [14, 82, 62],
+    cool:    [190, 70, 66],
+    rose:    [352, 45, 58],
+    violet:  [256, 46, 68],
+    neutral: [0, 0, 78],
+  };
+  const [h,s,l] = table[v] || table.neutral;
+  const light = v === 'neutral' ? l : lerp(l*0.6, l, t);
+  const sat = v === 'neutral' ? s : lerp(s*0.5, s, t);
+  return `hsla(${h}, ${sat}%, ${light}%, ${alpha})`;
+}
+
+/* ---------------------------------------------------------------------------------
+   5. NLP-ISH CHECK-IN PARSER: free text → Symptom[] (structured signals)
+--------------------------------------------------------------------------------- */
+function parseCheckIn(text) {
+  const t = text.toLowerCase();
+  const found = [];
+  const yesterday = new Date(today.getTime() - DAY_MS);
+  const push = (type, value, date, note) => found.push({ type, value: clamp(Math.round(value),0,10), date: date || today, note });
+
+  if (/period|bleeding|spotting/.test(t)) push('bleeding', 8, yesterday, 'started yesterday');
+  if (/exhaust|so tired|tired|fatigue/.test(t)) push('fatigue', 7, today);
+  if (/back (hurt|pain|ache)/.test(t)) push('backPain', 6, today);
+  if (/cramp/.test(t)) push('cramps', 6, today);
+  if (/slept badly|sleep(t)? (was )?bad|insomnia|didn'?t sleep|poor sleep/.test(t)) push('sleep', 3, today);
+  if (/emotional|sensitive|moody|weepy/.test(t)) push('sensitivity', 7, today);
+  if (/irritab|snapp(y|ed)/.test(t)) push('irritability', 6, today);
+  if (/headache|migraine/.test(t)) push('headache', 6, today);
+  if (/bloat/.test(t)) push('bloating', 5, today);
+  if (/anxious|anxiety/.test(t)) push('anxiety', 6, today);
+  if (/stress/.test(t)) push('stress', 6, today);
+  if (/happy|good|great|joy(ful)?/.test(t)) push('joy', 6, today);
+  if (/energetic|full of energy|energized/.test(t)) push('energy', 7, today);
+  if (/pelvic pain|pelvis/.test(t)) push('pelvicPain', 7, today);
+  if (/overwhelm/.test(t)) push('overwhelm', 6, today);
+
+  if (found.length === 0) {
+    const negWords = (t.match(/tired|bad|pain|sad|hurt|stress|anxious|low|awful|terrible/g) || []).length;
+    const posWords = (t.match(/good|great|happy|fine|okay|calm|well/g) || []).length;
+    push(posWords >= negWords ? 'joy' : 'sensitivity', 5, today, 'inferred from overall tone');
+  }
+  return found;
+}
+
+/* ---------------------------------------------------------------------------------
+   6. RUNTIME STATE + NODE STORE
+--------------------------------------------------------------------------------- */
+const RANGE_DAYS = { today: 1, week: 7, month: 30, '3m': 90, '6m': 999 };
+const RANGE_ORDER = ['today','week','month','3m','6m'];
+
+const state = {
+  stage: 'landing',
+  range: 'today',
+  nodes: [],           // ConstellationNode[]
+  revealedKeys: new Set(),
+  hover: null,
+  patternShown: false,
+  patternRevealActive: false,
+  communityOpen: false,
+  camera: { x:0, y:0, scale:1 },
+  cameraTarget: { x:0, y:0, scale:1 },
+};
+
+function keyFor(type, date) { return type + '@' + date.getTime(); }
+
+function addNode(type, value, date, meta) {
+  const key = keyFor(type, date);
+  if (state.revealedKeys.has(key)) return null;
+  state.revealedKeys.add(key);
+  const symptom = new Symptom(type, value, date, meta || {});
+  const node = new ConstellationNode(symptom, RegionAdapter);
+  node.bornAt = performance.now();
+  state.nodes.push(node);
+  return node;
+}
+
+function revealHistoryUpTo(days) {
+  const cutoff = new Date(today.getTime() - days * DAY_MS);
+  history.forEach(rec => {
+    if (rec.date < cutoff) return;
+    Object.entries(rec.symptoms).forEach(([type, value]) => {
+      addNode(type, value, rec.date, { cycleDay: rec.cycleDay, phase: rec.phase });
+    });
+  });
+}
+
+/* ---------------------------------------------------------------------------------
+   7. RENDERER: Canvas 2D. Position/size/glow/motion carry meaning; color only
+   encodes valence, never an arbitrary per-category palette.
+--------------------------------------------------------------------------------- */
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+let mouse = { x: -9999, y: -9999 };
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = window.innerWidth * DPR;
+  canvas.height = window.innerHeight * DPR;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  Layout.resize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+canvas.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; hideTooltip(); });
+
+// Screen (raw mouse) → world (pre-camera-transform) space, so hover/repulsion
+// stay correctly aligned with rendered node positions even while the "Show me"
+// cinematic zoom is animating the camera.
+function toWorld(sx, sy) {
+  return {
+    x: (sx - Layout.cx) / state.camera.scale + Layout.cx + state.camera.x,
+    y: (sy - Layout.cy) / state.camera.scale + Layout.cy + state.camera.y,
+  };
+}
+
+function computeXY(node, t, worldMouse) {
+  const region = Layout.centers[node.domain];
+  const floatX = Math.cos(t * node.floatSpeed + node.phase) * node.floatAmp;
+  const floatY = Math.sin(t * node.floatSpeed * 0.8 + node.phase * 1.3) * node.floatAmp;
+  let x = region.x + Math.cos(node.baseAngle) * node.baseRadius + floatX;
+  let y = region.y + Math.sin(node.baseAngle) * node.baseRadius + floatY;
+  const dx = x - worldMouse.x, dy = y - worldMouse.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 120) {
+    const push = (120 - dist) / 120 * 6;
+    x += (dx/(dist||1)) * push;
+    y += (dy/(dist||1)) * push;
+  }
+  node.x = x; node.y = y;
+  return { x, y };
+}
+
+function nodeRadius(node) {
+  const v = node.symptom.type === 'sleep' ? (10 - node.symptom.value) : node.symptom.value;
+  return clamp(3 + v * 0.85, 3, 11);
+}
+
+function drawConnections(now) {
+  if (!primaryPattern) return;
+  const visible = state.nodes.filter(n => primaryPattern.types.includes(n.symptom.type) &&
+    primaryPattern.days.some(d => d.date.getTime() === n.symptom.date.getTime()));
+  if (visible.length < 2) return;
+  const active = state.patternRevealActive;
+  ctx.lineWidth = active ? 1.4 : 0.6;
+  for (let i = 0; i < visible.length; i++) {
+    for (let j = i+1; j < visible.length; j++) {
+      const a = visible[i], b = visible[j];
+      if (a.symptom.date.getTime() !== b.symptom.date.getTime()) continue; // connect same-day co-occurrences
+      const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+      const alpha = active ? 0.55 : 0.10;
+      grad.addColorStop(0, colorFor(a, alpha));
+      grad.addColorStop(1, colorFor(b, alpha));
+      ctx.strokeStyle = grad;
+      ctx.beginPath();
+      const mx = (a.x+b.x)/2 + Math.sin(now*0.0006 + i)*10;
+      const my = (a.y+b.y)/2 + Math.cos(now*0.0006 + j)*10;
+      ctx.moveTo(a.x, a.y);
+      ctx.quadraticCurveTo(mx, my, b.x, b.y);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawRegionLabels() {
+  ctx.save();
+  ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = 'center';
+  REGION_ORDER.forEach(dom => {
+    const c = Layout.centers[dom];
+    const has = state.nodes.some(n => n.domain === dom);
+    ctx.fillStyle = has ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.10)';
+    ctx.fillText(REGION_LABELS[dom].toUpperCase(), c.x, c.y - Layout.R*0.5 - 6);
+  });
+  ctx.restore();
+}
+
+function drawCommunityGhosts(now) {
+  if (!state.communityOpen) return;
+  const spots = [ [0.10,0.14], [0.90,0.12], [0.88,0.86], [0.08,0.85] ];
+  ctx.save();
+  spots.forEach((s, si) => {
+    const cx = s[0]*Layout.w, cy = s[1]*Layout.h;
+    for (let i=0; i<10; i++) {
+      const a = (i/10)*Math.PI*2 + si;
+      const r = 18 + (i%4)*9;
+      const x = cx + Math.cos(a + now*0.00008)*r;
+      const y = cy + Math.sin(a*1.3 + now*0.00008)*r;
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(200,205,220,0.10)';
+      ctx.arc(x, y, 1.6, 0, Math.PI*2);
+      ctx.fill();
+    }
+  });
+  ctx.restore();
+}
+
+function draw(ts) {
+  const now = ts || 0;
+  const t = now / 1000;
+  ctx.clearRect(0,0,Layout.w,Layout.h);
+
+  state.camera.x = lerp(state.camera.x, state.cameraTarget.x, 0.06);
+  state.camera.y = lerp(state.camera.y, state.cameraTarget.y, 0.06);
+  state.camera.scale = lerp(state.camera.scale, state.cameraTarget.scale, 0.06);
+
+  ctx.save();
+  ctx.translate(Layout.cx, Layout.cy);
+  ctx.scale(state.camera.scale, state.camera.scale);
+  ctx.translate(-Layout.cx - state.camera.x, -Layout.cy - state.camera.y);
+
+  drawRegionLabels();
+  drawCommunityGhosts(now);
+
+  const worldMouse = toWorld(mouse.x, mouse.y);
+  state.nodes.forEach(n => computeXY(n, t, worldMouse));
+  drawConnections(now);
+
+  let hovered = null, hoverDist = 22 / state.camera.scale;
+  state.nodes.forEach(node => {
+    const age = node.bornAt ? (performance.now() - node.bornAt) : 99999;
+    const pulseT = clamp(age / 1400, 0, 1);
+    const pulse = age < 1400 ? (1 + (1-pulseT) * 0.9) : 1;
+    const r = nodeRadius(node) * pulse;
+    const baseAlpha = age < 1400 ? lerp(0.2, 1, pulseT) : 1;
+
+    const isHi = node.highlighted && performance.now() < node.highlightUntil;
+    const glow = isHi ? r * 5.5 : r * 3.2;
+
+    ctx.save();
+    ctx.shadowBlur = glow;
+    ctx.shadowColor = colorFor(node, isHi ? 0.9 : 0.55);
+    ctx.beginPath();
+    ctx.fillStyle = colorFor(node, baseAlpha * (isHi ? 1 : 0.88));
+    ctx.arc(node.x, node.y, r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    if (isHi) {
+      ctx.save();
+      const ringR = r + 6 + Math.sin(now*0.005)*2;
+      ctx.strokeStyle = 'rgba(240,190,110,0.65)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, ringR, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const d = Math.hypot(node.x - worldMouse.x, node.y - worldMouse.y);
+    if (d < hoverDist) { hoverDist = d; hovered = node; }
+  });
+
+  ctx.restore();
+  state.hover = hovered;
+  updateTooltip();
+  requestAnimationFrame(draw);
+}
+
+/* ---------------------------------------------------------------------------------
+   8. TOOLTIP
+--------------------------------------------------------------------------------- */
+const tooltipEl = document.getElementById('tooltip');
+function hideTooltip(){ tooltipEl.classList.remove('show'); }
+function updateTooltip() {
+  const n = state.hover;
+  if (!n) { hideTooltip(); canvas.style.cursor = 'default'; return; }
+  canvas.style.cursor = 'pointer';
+  const label = n.symptom.def.label;
+  const dateLabel = fmtDate(n.symptom.date);
+  const valueLabel = n.symptom.type === 'sleep' ? `${n.symptom.value}/10 quality` : `${n.symptom.value}/10`;
+  tooltipEl.innerHTML = `<div>${label} · ${valueLabel}</div><div class="t2">${dateLabel}${n.symptom.phase ? ' · ' + n.symptom.phase : ''}</div>`;
+  const screenX = Layout.cx + (n.x - Layout.cx - state.camera.x) * state.camera.scale;
+  const screenY = Layout.cy + (n.y - Layout.cy - state.camera.y) * state.camera.scale;
+  tooltipEl.style.left = screenX + 'px';
+  tooltipEl.style.top = screenY + 'px';
+  tooltipEl.classList.add('show');
+}
+function fmtDate(d) {
+  return d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+}
+
+/* ---------------------------------------------------------------------------------
+   9. UI WIRING: landing → check-in → extraction → timeline → pattern → support
+--------------------------------------------------------------------------------- */
+const $ = sel => document.querySelector(sel);
+const landing = $('#landing');
+const checkin = $('#checkin');
+const timeline = $('#timeline');
+const tlHint = $('#tlHint');
+const patternAlert = $('#patternAlert');
+const communityEl = $('#community');
+const scrim = $('#scrim');
+
+function showEl(el){ el.classList.add('show'); }
+function hideEl(el){ el.classList.remove('show'); }
+
+function openModal(id) {
+  showEl(scrim);
+  showEl(document.getElementById(id));
+}
+function closeModals() {
+  hideEl(scrim);
+  document.querySelectorAll('.modal').forEach(hideEl);
+}
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
+scrim.addEventListener('click', closeModals);
+
+function enterMainView() {
+  hideEl(landing);
+  showEl(timeline);
+  setTimeout(() => showEl(tlHint), 500);
+  setTimeout(() => hideEl(tlHint), 5500);
+}
+
+$('#btnExplore').addEventListener('click', enterMainView);
+
+$('#btnType').addEventListener('click', () => { openCheckin(false); });
+$('#btnTalk').addEventListener('click', () => { openCheckin(true); });
+
+const EXAMPLE_TEXT = "My period started yesterday. I'm exhausted today and my lower back hurts. I slept badly and I'm feeling unusually emotional.";
+
+function openCheckin(isTalk) {
+  hideEl(landing);
+  showEl(checkin);
+  const ta = $('#checkinText');
+  const mic = $('#micRow');
+  ta.value = '';
+  if (isTalk) {
+    mic.style.display = 'flex';
+    ta.placeholder = 'Listening…';
+    ta.disabled = true;
+    setTimeout(() => {
+      mic.style.display = 'none';
+      ta.disabled = false;
+      ta.value = EXAMPLE_TEXT;
+      ta.placeholder = '';
+    }, 1300);
+  } else {
+    mic.style.display = 'none';
+    ta.disabled = false;
+    ta.focus();
+  }
+}
+$('#btnExample').addEventListener('click', () => { $('#checkinText').value = EXAMPLE_TEXT; });
+$('#btnCancelCheckin').addEventListener('click', () => { hideEl(checkin); showEl(landing); });
+$('#btnSubmitCheckin').addEventListener('click', () => {
+  const text = $('#checkinText').value.trim();
+  if (!text) return;
+  hideEl(checkin);
+  runExtraction(text);
+});
+
+/* --- extraction animation: text → chips → fly into constellation --- */
+const extractLayer = $('#extractLayer');
+function runExtraction(text) {
+  const signals = parseCheckIn(text);
+  const chips = [];
+
+  signals.forEach((sig, i) => {
+    const el = document.createElement('div');
+    el.className = 'chip';
+    const color = colorForType(sig.type, sig.value);
+    el.innerHTML = `<span class="dot" style="background:${color}; box-shadow:0 0 8px ${color}"></span>${chipLabel(sig)}`;
+    extractLayer.appendChild(el);
+    chips.push({ el, sig });
+    setTimeout(() => el.classList.add('in'), 120 + i*260);
+  });
+
+  const totalDelay = 500 + signals.length * 260;
+  setTimeout(() => {
+    enterMainView();
+    chips.forEach(({el, sig}, i) => {
+      setTimeout(() => {
+        // freeze the chip's current on-screen center, then switch it to
+        // fixed positioning so it can fly free of the flex list toward
+        // its destination cluster.
+        const rect = el.getBoundingClientRect();
+        el.style.left = (rect.left + rect.width/2) + 'px';
+        el.style.top = (rect.top + rect.height/2) + 'px';
+        el.classList.add('fly');
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const region = Layout.centers[SYMPTOM_DEFS[sig.type].domain];
+          el.style.left = region.x + 'px';
+          el.style.top = region.y + 'px';
+        }));
+        setTimeout(() => {
+          addNode(sig.type, sig.value, sig.date, { note: sig.note });
+          el.remove();
+        }, 900);
+      }, i * 180);
+    });
+  }, totalDelay);
+}
+function colorForType(type, value) {
+  const def = SYMPTOM_DEFS[type];
+  const fake = { symptom: { def, type, value } };
+  return colorFor(fake, 0.95);
+}
+function chipLabel(sig) {
+  const def = SYMPTOM_DEFS[sig.type];
+  if (sig.type === 'bleeding') return `Bleeding (started yesterday)`;
+  if (sig.type === 'sleep') return `Sleep quality: poor`;
+  return `${def.label}: ${sig.value}/10`;
+}
+
+/* --- timeline scrubber --- */
+const tlTrack = $('#tlTrack');
+const tlThumb = $('#tlThumb');
+const steps = Array.from(document.querySelectorAll('.tl-step'));
+function layoutThumb() {
+  const idx = RANGE_ORDER.indexOf(state.range);
+  const btn = steps[idx];
+  tlThumb.style.width = btn.offsetWidth + 'px';
+  tlThumb.style.transform = `translateX(${btn.offsetLeft - 5}px)`;
+  steps.forEach((s,i) => s.classList.toggle('active', i === idx));
+}
+steps.forEach(btn => btn.addEventListener('click', () => setRange(btn.dataset.range)));
+
+let patternTriggeredAt = null;
+function setRange(range) {
+  if (state.range === range) return;
+  const wasNarrow = RANGE_ORDER.indexOf(state.range) <= 1;
+  state.range = range;
+  layoutThumb();
+  revealHistoryUpTo(RANGE_DAYS[range]);
+
+  const nowWide = RANGE_ORDER.indexOf(range) >= 2;
+  if (nowWide && !state.patternShown && primaryPattern) {
+    state.patternShown = true;
+    setTimeout(showPatternAlert, 900);
+  }
+  if (RANGE_ORDER.indexOf(range) >= 3 && !state.communityOpen) {
+    setTimeout(() => showEl(communityEl), 1400);
+  }
+}
+window.addEventListener('load', layoutThumb);
+
+function centroidOf(nodes) {
+  if (!nodes.length) return { x: Layout.cx, y: Layout.cy };
+  return { x: nodes.reduce((s,n)=>s+n.x,0)/nodes.length, y: nodes.reduce((s,n)=>s+n.y,0)/nodes.length };
+}
+
+function showPatternAlert() {
+  const relevant = state.nodes.filter(n => primaryPattern.types.includes(n.symptom.type) &&
+    patternDays.some(d => d.date.getTime() === n.symptom.date.getTime()));
+  const c = centroidOf(relevant.length ? relevant : state.nodes);
+  patternAlert.style.left = clamp(c.x, 90, window.innerWidth-90) + 'px';
+  patternAlert.style.top = clamp(c.y - 40, 90, window.innerHeight-90) + 'px';
+  patternAlert.style.transform = 'translate(-50%,-50%)';
+  showEl(patternAlert);
+}
+patternAlert.addEventListener('click', () => {
+  hideEl(patternAlert);
+  const insight = buildPatternInsight(primaryPattern);
+  $('#patHeadline').textContent = insight.headline;
+  $('#patBody').textContent = insight.body;
+  $('#patCaveat').textContent = insight.caveat;
+  openModal('modalPattern');
+});
+$('#btnShowMe').addEventListener('click', () => {
+  closeModals();
+  const relevant = state.nodes.filter(n => primaryPattern.types.includes(n.symptom.type) &&
+    patternDays.some(d => d.date.getTime() === n.symptom.date.getTime()));
+  const until = performance.now() + 5000;
+  relevant.forEach(n => { n.highlighted = true; n.highlightUntil = until; });
+  const c = centroidOf(relevant);
+  state.cameraTarget = { x: c.x - Layout.cx, y: c.y - Layout.cy, scale: 1.5 };
+  state.patternRevealActive = true;
+  setTimeout(() => {
+    state.cameraTarget = { x:0, y:0, scale:1 };
+    state.patternRevealActive = false;
+  }, 5200);
+});
+
+/* --- node click: difficult → support flow, else → light detail card --- */
+let activeSupportNode = null;
+canvas.addEventListener('click', () => {
+  const n = state.hover;
+  if (!n) return;
+  if (n.domain === Domain.CONTEXT) { showInfoCard(n); return; }
+  if (n.isDifficult) { openSupportFor(n); return; }
+  showInfoCard(n);
+});
+
+function showInfoCard(n) {
+  $('#infoEyebrow').textContent = REGION_LABELS[n.domain];
+  $('#infoHeadline').textContent = `${n.symptom.def.label} · ${fmtDate(n.symptom.date)}`;
+  const val = n.symptom.type === 'sleep' ? `${n.symptom.value}/10 quality` : `${n.symptom.value}/10`;
+  $('#infoBody').textContent = `Reported at ${val}${n.symptom.phase ? ', during your ' + n.symptom.phase + ' phase' : ''}. Synthetic demo data.`;
+  openModal('modalInfo');
+}
+
+function openSupportFor(n) {
+  activeSupportNode = n;
+  $('#supTag').textContent = `${n.symptom.def.label} · ${n.symptom.value}/10`;
+  $('#supSwatch').style.background = colorFor(n, 1);
+  openModal('modalSupport');
+}
+
+document.querySelectorAll('#modalSupport .option-row').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const need = btn.dataset.need;
+    closeModals();
+    handleNeed(need, activeSupportNode);
+  });
+});
+
+function handleNeed(need, n) {
+  if (!n) return;
+  const label = n.symptom.def.label.toLowerCase();
+  if (need === 'understand') {
+    const inPattern = primaryPattern && primaryPattern.types.includes(n.symptom.type);
+    $('#detEyebrow').textContent = 'Understand this';
+    $('#detHeadline').textContent = 'What this might mean';
+    if (inPattern) {
+      const insight = buildPatternInsight(primaryPattern);
+      $('#detBody').innerHTML = `<p>${insight.body}</p><div class="caveat">${insight.caveat}</div>`;
+    } else {
+      $('#detBody').innerHTML = `<p>${n.symptom.def.label} can have many possible causes and can vary across your cycle. Tracking when it shows up (and what else is happening alongside it) can help you and a healthcare professional spot patterns worth discussing.</p>`;
+    }
+    openModal('modalDetail');
+  } else if (need === 'feel-better') {
+    $('#detEyebrow').textContent = 'Feel better';
+    $('#detHeadline').textContent = 'A few gentle options';
+    $('#detBody').innerHTML = `<ul>
+      <li>A warm compress or heating pad on the area</li>
+      <li>Slow, gentle movement or stretching</li>
+      <li>Water, and a light, easy-to-digest meal</li>
+      <li>A few minutes of slow breathing or rest</li>
+    </ul><div class="caveat">These are general wellbeing suggestions, not medical treatment. If this feels severe or unusual, please talk to a healthcare professional.</div>`;
+    openModal('modalDetail');
+  } else if (need === 'acknowledge') {
+    $('#detEyebrow').textContent = 'Acknowledged';
+    $('#detHeadline').textContent = 'That sounds like a lot to carry.';
+    $('#detBody').innerHTML = `<p>It's been noted (gently, without judgment). Nothing else to do right now.</p>`;
+    openModal('modalDetail');
+  } else if (need === 'doctor') {
+    const summary = buildDoctorSummary(n.symptom.type);
+    $('#detEyebrow').textContent = 'Prepare for my doctor';
+    $('#detHeadline').textContent = `${n.symptom.def.label}: summary`;
+    const phaseText = summary.topPhase ? `mostly during the <b>${summary.topPhase}</b> phase` : 'without a clear phase pattern';
+    const coText = summary.topCooccur.length ? joinWithAnd(summary.topCooccur) : 'no other symptoms at a notable rate';
+    $('#detBody').innerHTML = `<p>Over the last ${summary.cyclesSpan} cycles (synthetic demo data):</p>
+      <ul>
+        <li>${n.symptom.def.label} appeared on <b>${summary.count}</b> days</li>
+        <li>Average reported intensity: <b>${summary.avg}/10</b></li>
+        <li>Frequently co-occurred with: <b>${coText}</b></li>
+        <li>These reports clustered ${phaseText}</li>
+      </ul>
+      <div class="caveat">This is a prototype summary generated from synthetic data. It is not a diagnosis. Bring it to a healthcare professional for interpretation.</div>`;
+    openModal('modalDetail');
+  }
+}
+
+/* --- community constellations --- */
+$('#btnCommunity').addEventListener('click', () => {
+  state.communityOpen = !state.communityOpen;
+  communityEl.classList.toggle('expanded', state.communityOpen);
+  $('#communityText').textContent = state.communityOpen
+    ? "People with similar self-reported patterns (anonymous, aggregate only). This never implies a shared diagnosis."
+    : "You're not the only constellation like this.";
+  $('#btnCommunity').textContent = state.communityOpen ? 'Hide' : 'Explore';
+});
+
+/* ---------------------------------------------------------------------------------
+   10. INIT
+--------------------------------------------------------------------------------- */
+resize();
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

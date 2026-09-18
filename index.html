@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>shape: Your body has a shape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#05060a;
+    --bg-1:#0b0e18;
+    --bg-2:#12172a;
+    --ink-0:#f4f1ea;
+    --ink-1:#c9c9d4;
+    --ink-2:#8a8b9c;
+    --line:rgba(255,255,255,0.09);
+    --panel:rgba(14,16,28,0.66);
+    --warm:hsl(14,82%,62%);
+    --cool:hsl(190,70%,66%);
+    --rose:hsl(352,38%,58%);
+    --violet:hsl(256,46%,68%);
+    --neutral:hsl(0,0%,78%);
+    --gold:hsl(38,72%,62%);
+    --care:hsl(158,34%,66%);
+    --font-display:"Space Grotesk", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Arial, sans-serif;
+    --font-ui:"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+    background:var(--bg-0);
+    font-family:var(--font-ui);
+    color:var(--ink-0);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,.brand{font-family:var(--font-display);}
+  #stage{position:fixed; inset:0; background:
+      radial-gradient(ellipse 80% 60% at 50% 20%, rgba(50,55,80,0.26), transparent 60%),
+      radial-gradient(ellipse 70% 70% at 80% 90%, rgba(30,60,70,0.20), transparent 60%),
+      radial-gradient(ellipse 60% 60% at 10% 85%, rgba(70,30,45,0.16), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1) 55%, #08090f 100%);
+  }
+  canvas{position:fixed; inset:0; width:100%; height:100%; cursor:default;}
+  .noise{position:fixed; inset:0; pointer-events:none; opacity:0.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- chrome ---------- */
+  .chrome-top{position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center;
+    padding:22px 28px; pointer-events:none; z-index:20;}
+  .brand{font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:var(--ink-2); font-weight:500;}
+  .badges{display:flex; gap:8px; align-items:center;}
+  .badge{font-size:11px; letter-spacing:0.05em; color:var(--ink-2); background:rgba(255,255,255,0.04);
+    border:1px solid var(--line); padding:6px 12px; border-radius:100px; pointer-events:auto;}
+  .badge b{color:var(--ink-1); font-weight:600;}
+  .badge .dot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--ink-2); margin-right:6px; vertical-align:middle;}
+  .badge.online .dot{background:var(--care); box-shadow:0 0 8px var(--care);}
+
+  /* ---------- landing ---------- */
+  #landing{position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:34px; z-index:15; transition:opacity 900ms ease, filter 900ms ease; text-align:center; padding:0 24px;
+    opacity:0; filter:blur(8px); pointer-events:none;}
+  #landing.show{opacity:1; filter:blur(0); pointer-events:auto;}
+  #landing h1{font-size:clamp(28px,4.4vw,52px); font-weight:500; letter-spacing:-0.01em; margin:0; line-height:1.15; max-width:16em;}
+  #landing .sub{font-size:14px; color:var(--ink-2); max-width:34em; margin-top:-18px; line-height:1.6;}
+  .actions{display:flex; gap:14px; flex-wrap:wrap; justify-content:center;}
+  button{font-family:inherit; cursor:pointer;}
+  .pill{background:rgba(255,255,255,0.045); border:1px solid var(--line); color:var(--ink-0);
+    padding:14px 26px; border-radius:100px; font-size:14px; letter-spacing:0.02em; transition:all 220ms ease; backdrop-filter:blur(6px);}
+  .pill:hover{background:rgba(255,255,255,0.09); border-color:rgba(255,255,255,0.22); transform:translateY(-1px);}
+  .pill.ghost{background:transparent;}
+  .pill.primary{background:rgba(255,255,255,0.10); border-color:rgba(255,255,255,0.28);}
+
+  /* ---------- checkin panel ---------- */
+  #checkin{position:fixed; left:50%; bottom:64px; transform:translateX(-50%) translateY(20px); width:min(560px,90vw);
+    background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:20px; z-index:30;
+    backdrop-filter:blur(16px); opacity:0; pointer-events:none; transition:opacity 380ms ease, transform 380ms ease;}
+  #checkin.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+  #checkin textarea{width:100%; min-height:88px; resize:none; background:transparent; border:none; outline:none;
+    color:var(--ink-0); font-family:inherit; font-size:15px; line-height:1.5;}
+  #checkin textarea::placeholder{color:var(--ink-2);}
+  .mic-row{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--ink-2); margin-bottom:8px; letter-spacing:0.04em;}
+  .mic-dot{width:8px; height:8px; border-radius:50%; background:var(--warm); animation:pulseDot 1.1s infinite ease-in-out;}
+  @keyframes pulseDot{0%,100%{opacity:0.35; transform:scale(0.85);} 50%{opacity:1; transform:scale(1.15);}}
+  .checkin-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:10px;}
+  .link-btn{background:none; border:none; color:var(--ink-2); font-size:12px; padding:8px 10px;}
+  .link-btn:hover{color:var(--ink-0);}
+  .small-pill{background:rgba(255,255,255,0.07); border:1px solid var(--line); color:var(--ink-0);
+    padding:9px 18px; border-radius:100px; font-size:13px;}
+  .small-pill:hover{background:rgba(255,255,255,0.14);}
+  .small-pill.on{background:rgba(120,200,160,0.14); border-color:rgba(120,200,160,0.4);}
+
+  /* ---------- extraction chips ---------- */
+  #extractLayer{position:fixed; left:50%; bottom:170px; transform:translateX(-50%); display:flex;
+    flex-direction:column; align-items:center; gap:10px; pointer-events:none; z-index:28;}
+  .chip{padding:8px 14px; border-radius:100px; font-size:12.5px; letter-spacing:0.01em;
+    background:rgba(20,22,36,0.85); border:1px solid rgba(255,255,255,0.16); color:var(--ink-0);
+    white-space:nowrap; box-shadow:0 8px 30px rgba(0,0,0,0.35); opacity:0; transform:scale(0.85);
+    transition:opacity 420ms ease, transform 420ms ease;}
+  .chip.in{opacity:1; transform:scale(1);}
+  .chip.fly{position:fixed; margin:0; opacity:0; transform:translate(-50%,-50%) scale(0.35);
+    transition:opacity 420ms ease, transform 420ms ease, top 900ms cubic-bezier(.6,0,.3,1), left 900ms cubic-bezier(.6,0,.3,1);}
+  .chip .dot{display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:8px; vertical-align:middle;}
+
+  /* ---------- timeline ---------- */
+  #timeline{position:fixed; left:50%; bottom:34px; transform:translateX(-50%); z-index:22;
+    display:flex; flex-direction:column; align-items:center; gap:10px; opacity:0; pointer-events:none; transition:opacity 700ms ease;}
+  #timeline.show{opacity:1; pointer-events:auto;}
+  .tl-hint{font-size:12px; color:var(--ink-2); letter-spacing:0.03em; opacity:0; transition:opacity 600ms ease; height:14px;}
+  .tl-hint.show{opacity:1;}
+  .tl-track{position:relative; display:flex; gap:0; background:rgba(255,255,255,0.03); border:1px solid var(--line);
+    border-radius:100px; padding:5px; backdrop-filter:blur(10px);}
+  .tl-step{position:relative; z-index:2; padding:9px 18px; font-size:12.5px; color:var(--ink-2); border-radius:100px;
+    letter-spacing:0.03em; transition:color 300ms ease; background:none; border:none;}
+  .tl-step.active{color:var(--bg-0);}
+  .tl-thumb{position:absolute; top:5px; left:5px; height:calc(100% - 10px); border-radius:100px;
+    background:linear-gradient(120deg,#f4f1ea,#cfd0da); transition:transform 480ms cubic-bezier(.6,0,.3,1), width 480ms cubic-bezier(.6,0,.3,1); z-index:1;}
+
+  /* ---------- pattern alert ---------- */
+  #patternAlert{position:fixed; z-index:26; display:flex; align-items:center; gap:10px; padding:12px 18px;
+    background:rgba(20,16,10,0.7); border:1px solid rgba(255,200,120,0.35); border-radius:100px; cursor:pointer;
+    opacity:0; transform:scale(0.9); transition:opacity 600ms ease, transform 600ms ease; box-shadow:0 0 40px rgba(255,180,90,0.12); pointer-events:none;}
+  #patternAlert.show{opacity:1; transform:scale(1); pointer-events:auto;}
+  #patternAlert .ring{width:9px; height:9px; border-radius:50%; background:var(--gold); box-shadow:0 0 14px 3px rgba(240,180,90,0.7); animation:pulseDot 1.3s infinite ease-in-out;}
+  #patternAlert span{font-size:13px; letter-spacing:0.02em;}
+
+  /* ---------- modals ---------- */
+  .modal-scrim{position:fixed; inset:0; background:rgba(3,4,8,0.55); backdrop-filter:blur(3px); z-index:40; opacity:0; pointer-events:none; transition:opacity 320ms ease;}
+  .modal-scrim.show{opacity:1; pointer-events:auto;}
+  .modal{position:fixed; left:50%; top:50%; transform:translate(-50%,-46%); width:min(480px,88vw); max-height:78vh;
+    overflow:auto; background:linear-gradient(180deg, rgba(20,22,34,0.92), rgba(12,13,22,0.94)); border:1px solid var(--line);
+    border-radius:22px; padding:30px; z-index:41; opacity:0; pointer-events:none; transition:opacity 340ms ease, transform 340ms ease;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5);}
+  .modal.show{opacity:1; transform:translate(-50%,-50%); pointer-events:auto;}
+  .modal .eyebrow{font-size:11px; text-transform:uppercase; letter-spacing:0.14em; color:var(--ink-2); margin-bottom:10px;}
+  .modal h2{font-size:22px; font-weight:500; margin:0 0 14px; line-height:1.3;}
+  .modal p{font-size:14.5px; line-height:1.65; color:var(--ink-1); margin:0 0 12px;}
+  .modal .caveat{font-size:13px; color:var(--ink-2); font-style:italic; border-left:2px solid var(--line); padding-left:12px; margin:16px 0;}
+  .modal ul{margin:0 0 14px; padding-left:18px; color:var(--ink-1); font-size:14px; line-height:1.75;}
+  .modal .row-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; align-items:center;}
+  .modal .close-x{position:absolute; top:18px; right:20px; background:none; border:none; color:var(--ink-2); font-size:18px;}
+  .modal .close-x:hover{color:var(--ink-0);}
+  .option-grid{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
+  .option-row{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border:1px solid var(--line);
+    border-radius:14px; background:rgba(255,255,255,0.02); transition:all 200ms ease; text-align:left; color:var(--ink-0); font-size:14px;}
+  .option-row:hover{background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.2);}
+  .option-row .arrow{opacity:0.4;}
+  .option-row small{display:block; color:var(--ink-2); font-size:12px; margin-top:2px;}
+  .node-tag{display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-2); margin-bottom:16px;}
+  .node-tag .swatch{width:8px; height:8px; border-radius:50%;}
+  .feedback-row{display:flex; align-items:center; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); flex-wrap:wrap;}
+  .feedback-row span{font-size:12.5px; color:var(--ink-2); margin-right:auto;}
+  .feedback-row.done span{color:var(--ink-1);}
+
+  /* ---------- tooltip ---------- */
+  #tooltip{position:fixed; z-index:25; pointer-events:none; padding:8px 12px; border-radius:10px; font-size:12px;
+    background:rgba(14,15,24,0.92); border:1px solid var(--line); color:var(--ink-0); opacity:0; transition:opacity 140ms ease;
+    transform:translate(-50%,-130%); white-space:nowrap; box-shadow:0 6px 20px rgba(0,0,0,0.4);}
+  #tooltip.show{opacity:1;}
+  #tooltip .t2{color:var(--ink-2); font-size:11px; margin-top:2px;}
+
+  /* ---------- side toggles (community, care) ---------- */
+  .side-note{position:fixed; right:26px; z-index:21; text-align:right; opacity:0; transform:translateY(10px);
+    transition:opacity 700ms ease, transform 700ms ease; max-width:260px; pointer-events:none;}
+  .side-note.show{opacity:1; transform:translateY(0); pointer-events:auto;}
+  .side-note p{font-size:12.5px; color:var(--ink-2); line-height:1.5; margin:0 0 8px;}
+  .side-note .link-btn{color:var(--ink-0); border:1px solid var(--line); border-radius:100px; padding:7px 14px;}
+  #community{bottom:30px;}
+  #careToggle{bottom:136px;}
+  #careToggle .link-btn{border-color:rgba(120,200,160,0.35);}
+
+  /* ---------- coach orb ---------- */
+  #coach{position:fixed; left:26px; bottom:96px; z-index:21; display:flex; align-items:center; gap:14px; max-width:340px; pointer-events:none;}
+  #coach .orb{width:22px; height:22px; border-radius:50%; flex:none; position:relative;
+    background:radial-gradient(circle at 35% 35%, hsl(38,80%,78%), hsl(24,70%,58%) 60%, hsl(14,60%,40%));
+    box-shadow:0 0 18px 4px rgba(240,180,110,0.35); animation:breathe 4.6s ease-in-out infinite;}
+  #coach .orb::after{content:""; position:absolute; inset:-8px; border-radius:50%; border:1px solid rgba(240,190,120,0.18); animation:breathe 4.6s ease-in-out infinite reverse;}
+  @keyframes breathe{0%,100%{transform:scale(0.92);} 50%{transform:scale(1.08);}}
+  #coach .line{font-size:13px; color:var(--ink-1); line-height:1.5; opacity:0; transform:translateY(4px); transition:opacity 600ms ease, transform 600ms ease;}
+  #coach .line.show{opacity:1; transform:translateY(0);}
+
+  /* ---------- talk it through ---------- */
+  #coach .orb{pointer-events:auto; cursor:pointer;}
+  #modalTalk{width:min(520px,92vw); max-height:82vh; display:flex; flex-direction:column;}
+  #modalTalk.show{display:flex;}
+  .talk-log{flex:1; overflow:auto; display:flex; flex-direction:column; gap:12px; padding:6px 2px; min-height:180px; max-height:46vh;}
+  .msg{font-size:14.5px; line-height:1.6; max-width:92%; white-space:pre-wrap;}
+  .msg.assistant{color:var(--ink-0); align-self:flex-start; padding-left:14px; border-left:2px solid rgba(240,190,120,0.35);}
+  .msg.user{color:var(--ink-1); align-self:flex-end; text-align:right; opacity:0.85;}
+  .msg.assistant.typing::after{content:"▍"; opacity:0.5; animation:pulseDot 1s infinite;}
+  .talk-input{display:flex; gap:8px; align-items:flex-end; margin-top:14px; border-top:1px solid var(--line); padding-top:14px;}
+  .talk-input textarea{flex:1; min-height:44px; max-height:120px; resize:none; background:rgba(255,255,255,0.03); border:1px solid var(--line);
+    border-radius:14px; padding:11px 14px; color:var(--ink-0); font-family:inherit; font-size:14px; line-height:1.5; outline:none;}
+  .talk-input textarea:focus{border-color:rgba(255,255,255,0.22);}
+  .talk-note{font-size:11.5px; color:var(--ink-2); margin-top:10px; line-height:1.5;}
+  .msg .status{display:block; font-size:12px; color:var(--ink-2); font-style:italic;}
+  .msg .sources{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .msg .sources a{font-size:11.5px; color:var(--ink-2); text-decoration:none; border:1px solid var(--line); border-radius:100px; padding:3px 9px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .msg .sources a:hover{color:var(--ink-0); border-color:rgba(255,255,255,0.25);}
+
+  /* ---------- footer note ---------- */
+  #synthNote{position:fixed; left:26px; bottom:26px; z-index:15; font-size:11px; color:var(--ink-2); max-width:300px; line-height:1.5; opacity:0.75;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15); border-radius:10px;}
+
+  @media (max-width:640px){
+    .chrome-top{padding:16px;}
+    #landing h1{font-size:26px;}
+    .actions{flex-direction:column; width:100%;}
+    .pill{width:100%;}
+    .side-note{display:none;}
+    #storeBadge{display:none;}
+    .tl-hint{display:none;}
+    #coach{max-width:70vw; bottom:150px;}
+    #synthNote{max-width:180px; font-size:10px;}
+    .modal{padding:22px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+<canvas id="cv"></canvas>
+<div class="noise"></div>
+
+<div class="chrome-top">
+  <div class="brand">shape</div>
+  <div class="badges">
+    <div class="badge" id="storeBadge"><span class="dot"></span><b>Local only</b> · care actions saved on this device</div>
+    <div class="badge">● <b>Synthetic demo data</b> (prototype, not medical software)</div>
+  </div>
+</div>
+
+<div id="landing" class="show">
+  <h1>How does your body feel today?</h1>
+  <div class="sub">Not a tracker. Not a dashboard. A living map of what your body has been telling you.</div>
+  <div class="actions">
+    <button class="pill primary" id="btnTalk">Talk</button>
+    <button class="pill" id="btnType">Type</button>
+    <button class="pill ghost" id="btnExplore">Explore my body</button>
+  </div>
+</div>
+
+<div id="checkin">
+  <div class="mic-row" id="micRow" style="display:none;"><span class="mic-dot"></span> Listening…</div>
+  <textarea id="checkinText" placeholder="My period started yesterday. I'm exhausted today and my lower back hurts…"></textarea>
+  <div class="checkin-actions">
+    <button class="link-btn" id="btnExample">Use example</button>
+    <button class="link-btn" id="btnCancelCheckin">Cancel</button>
+    <button class="small-pill" id="btnSubmitCheckin">Add to my constellation</button>
+  </div>
+</div>
+
+<div id="extractLayer"></div>
+
+<div id="timeline">
+  <div class="tl-hint" id="tlHint">Scrub through time to see the full picture →</div>
+  <div class="tl-track" id="tlTrack">
+    <div class="tl-thumb" id="tlThumb"></div>
+    <button class="tl-step" data-range="today">Today</button>
+    <button class="tl-step" data-range="week">Week</button>
+    <button class="tl-step" data-range="month">Month</button>
+    <button class="tl-step" data-range="3m">3 Months</button>
+    <button class="tl-step" data-range="6m">6 Months</button>
+  </div>
+</div>
+
+<div id="patternAlert"><span class="ring"></span><span>I found something.</span></div>
+
+<div id="careToggle" class="side-note">
+  <p id="careText">What you've reached for lives here too.</p>
+  <button class="link-btn" id="btnCare">What I've tried</button>
+</div>
+
+<div id="community" class="side-note">
+  <p id="communityText">You're not the only constellation like this.</p>
+  <button class="link-btn" id="btnCommunity">Explore</button>
+</div>
+
+<div id="coach"><div class="orb"></div><div class="line" id="coachLine"></div></div>
+
+<div id="synthNote">Health history shown is synthetic demo data. Care actions you add are real and stay tied to an anonymous device id.</div>
+
+<div id="tooltip"></div>
+
+<div class="modal-scrim" id="scrim"></div>
+
+<div class="modal" id="modalPattern">
+  <button class="close-x" data-close>✕</button>
+  <div class="eyebrow">Pattern observed</div>
+  <h2 id="patHeadline">I noticed a pattern.</h2>
+  <p id="patBody"></p>
+  <div class="caveat" id="patCaveat"></div>
+  <div class="row-actions">
+    <button class="small-pill" id="btnShowMe">Show me</button>
+    <button class="link-btn" data-close>Not now</button>
+  </div>
+</div>
+
+<div class="modal" id="modalSupport">
+  <button class="close-x" data-close>✕</button>
+  <div class="node-tag"><span class="swatch" id="supSwatch"></span><span id="supTag">Pelvic pain · 8/10</span></div>
+  <h2>What do you need right now?</h2>
+  <div class="option-grid">
+    <button class="option-row" data-need="understand"><span>Understand this</span><span class="arrow">→</span></button>
+    <button class="option-row" data-need="feel-better"><span>Feel better</span><span class="arrow">→</span></button>
+    <button class="option-row" data-need="acknowledge"><span>Just acknowledge it</span><span class="arrow">→</span></button>
+    <button class="option-row" data-need="doctor"><span>Prepare for my doctor</span><span class="arrow">→</span></button>
+    <button class="option-row" data-need="talk"><span>Talk it through<small>share how it feels, out loud</small></span><span class="arrow">→</span></button>
+  </div>
+</div>
+
+<div class="modal" id="modalTalk">
+  <button class="close-x" data-close>✕</button>
+  <div class="eyebrow">Talk it through</div>
+  <div class="talk-log" id="talkLog"></div>
+  <div class="talk-input">
+    <textarea id="talkText" placeholder="Say it however it comes…" rows="1"></textarea>
+    <button class="small-pill" id="talkSend">Send</button>
+  </div>
+  <div class="feedback-row" id="talkFeedback" style="display:none;"></div>
+  <div class="talk-note">A companion to share feelings with, not a therapist or a doctor. Messages are sent to an AI model to respond and are not saved; if you ask for practical information it may look it up on the web and show its sources. If you're in danger, please reach a person now: Línea de la Vida 800 911 2000 (MX) · 988 (US).</div>
+</div>
+
+<div class="modal" id="modalDetail">
+  <button class="close-x" data-close>✕</button>
+  <div class="eyebrow" id="detEyebrow">Understand this</div>
+  <h2 id="detHeadline"></h2>
+  <div id="detBody"></div>
+  <div class="feedback-row" id="detFeedback" style="display:none;"></div>
+  <div class="row-actions">
+    <button class="link-btn" data-close>Close</button>
+  </div>
+</div>
+
+<div class="modal" id="modalInfo">
+  <button class="close-x" data-close>✕</button>
+  <div class="eyebrow" id="infoEyebrow">Context</div>
+  <h2 id="infoHeadline"></h2>
+  <p id="infoBody"></p>
+  <div class="feedback-row" id="infoFeedback" style="display:none;"></div>
+</div>
+
+<div class="modal" id="modalCluster">
+  <button class="close-x" data-close>✕</button>
+  <div class="eyebrow">A group, not a person</div>
+  <h2 id="clHeadline"></h2>
+  <div id="clBody"></div>
+  <div class="caveat">Similarity is based on self-reported patterns, not clinical information. This is not a shared diagnosis. No individual's data is shown, and groups under the privacy floor are never shown.</div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+'use strict';
+/* =====================================================================================
+   SHAPE: client. Rendering + interaction only. Every data computation comes from
+   engine.js (shared with server/server.js), so patterns, signatures and clusters
+   are the same code on both sides.
+
+   Layers on screen:
+     Observation → Symptom → ConstellationNode  (the person)
+     CareAction  → CareNode                     (what they reached for; persisted)
+     Signature   → SimilarityCluster → distant constellations (other people, aggregate only)
+===================================================================================== */
+const E = window.ShapeEngine;
+const { DAY_MS, clamp, Domain, CyclePhase, SYMPTOM_DEFS, CARE_ACTIVITIES, meetsCondition } = E;
+const lerp = (a, b, t) => a + (b - a) * t;
+const V = E.makeRng(7);                 // visual-only randomness (jitter, float), separate from data
+const rr = V.rr;
+
+/* ---------- 1. the person: demo persona (synthetic, seeded) ---------- */
+const today = new Date(); today.setHours(0,0,0,0);
+const persona = E.generatePersona({
+  seed: 90210, cycleLengths: [24, 21], archetype: 'luteal-pain', today,
+  // synthetic care history so the care layer has something to reflect during a demo
+  careProfile: [
+    { activity: 'slow-breathing', times: 3, helpedRate: 1,    onPatternDays: true },
+    { activity: 'warm-compress',  times: 2, helpedRate: 0.5,  onPatternDays: true },
+    { activity: 'gentle-movement',times: 1, helpedRate: 0,    onPatternDays: false },
+    { activity: 'write-it-out',   times: 1, helpedRate: null, onPatternDays: false },
+  ],
+});
+const { history, completed, patternDays } = persona;
+
+/* ---------- 2. structured signal classes (client-side view of the data layer) ---------- */
+class Symptom {
+  constructor(type, value, date, opts = {}) {
+    this.id = `${type}-${date.getTime()}-${Math.random().toString(36).slice(2,7)}`;
+    this.type = type; this.value = value; this.date = date; this.def = SYMPTOM_DEFS[type];
+    this.note = opts.note || ''; this.cycleDay = opts.cycleDay ?? null; this.phase = opts.phase || null;
+  }
+}
+class ConstellationNode {
+  constructor(symptom) {
+    this.kind = 'symptom';
+    this.symptom = symptom;
+    this.date = symptom.date;
+    this.dayKey = E.dayKey(symptom.date);
+    this.domain = symptom.def.domain;
+    const jitter = Layout.spreadFor(this.domain);
+    this.baseAngle = jitter.angle; this.baseRadius = jitter.radius;
+    this.phase = rr(0, Math.PI*2); this.floatAmp = rr(4, 11); this.floatSpeed = rr(0.25, 0.55);
+    this.x = 0; this.y = 0; this.tx = null; this.ty = null;
+    this.bornAt = null; this.highlighted = false; this.highlightUntil = 0;
+  }
+  get isDifficult() {
+    const v = this.symptom.def.valence;
+    if (this.domain === Domain.CONTEXT) return false;
+    if (this.symptom.type === 'sleep') return this.symptom.value <= 4;
+    return (v === 'warm') && this.symptom.value >= 5;
+  }
+}
+// A care action drawn as a node. Angle inside the CARE region encodes modality, so
+// "what I've tried" reads spatially: same modality gathers in the same sector.
+class CareNode {
+  constructor(action) {
+    this.kind = 'care';
+    this.action = action;
+    this.date = new Date(action.timestamp);
+    this.dayKey = E.dayKey(action.timestamp);
+    this.domain = Domain.CARE;
+    const slot = E.CARE_MODALITIES.indexOf(action.modality);
+    const sector = (slot / E.CARE_MODALITIES.length) * Math.PI * 2;
+    this.baseAngle = sector + rr(-0.28, 0.28);
+    this.baseRadius = rr(Layout.careR * 0.35, Layout.careR * 0.95);
+    this.phase = rr(0, Math.PI*2); this.floatAmp = rr(3, 7); this.floatSpeed = rr(0.18, 0.4);
+    this.x = 0; this.y = 0; this.tx = null; this.ty = null;
+    this.bornAt = null; this.highlighted = false; this.highlightUntil = 0;
+  }
+}
+
+/* ---------- 3. layout: six domain regions on a ring, care at the heart ---------- */
+const REGION_ORDER = [Domain.CYCLE, Domain.BODY, Domain.ENERGY, Domain.MIND, Domain.EMOTIONS, Domain.CONTEXT];
+const REGION_LABELS = { CYCLE:'Cycle', BODY:'Body', ENERGY:'Energy', MIND:'Mind', EMOTIONS:'Emotions', CONTEXT:'Context', CARE:'Care' };
+const Layout = {
+  w:0, h:0, cx:0, cy:0, R:0, careR:0, centers:{},
+  resize(w, h) {
+    this.w = w; this.h = h; this.cx = w*0.5; this.cy = h*0.52;
+    this.R = Math.min(w, h) * (w < 720 ? 0.24 : 0.30);
+    this.careR = this.R * 0.4;
+    REGION_ORDER.forEach((dom, i) => {
+      const angle = -Math.PI/2 + i * (Math.PI*2 / REGION_ORDER.length);
+      this.centers[dom] = { x: this.cx + Math.cos(angle)*this.R, y: this.cy + Math.sin(angle)*this.R, angle };
+    });
+    this.centers[Domain.CARE] = { x: this.cx, y: this.cy, angle: 0 };
+  },
+  spreadFor(domain) { return { angle: rr(0, Math.PI*2), radius: rr(0, this.R*0.42) }; },
+};
+
+function colorFor(node, alpha) {
+  if (node.kind === 'care') {
+    const fb = node.action.feedback;
+    const l = fb === 'helped' ? 70 : fb === 'not-helped' ? 48 : 60;
+    return `hsla(158, 34%, ${l}%, ${alpha})`;
+  }
+  const v = node.symptom.def.valence;
+  const intensity = node.symptom.type === 'sleep' ? (10 - node.symptom.value) : node.symptom.value;
+  const t = clamp(intensity/10, 0.15, 1);
+  const table = { warm:[14,82,62], cool:[190,70,66], rose:[352,45,58], violet:[256,46,68], neutral:[0,0,78] };
+  const [h,s,l] = table[v] || table.neutral;
+  const light = v === 'neutral' ? l : lerp(l*0.6, l, t);
+  const sat = v === 'neutral' ? s : lerp(s*0.5, s, t);
+  return `hsla(${h}, ${sat}%, ${light}%, ${alpha})`;
+}
+
+/* ---------- 4. check-in parser (rule-based stand-in for extraction) ---------- */
+function parseCheckIn(text) {
+  const t = text.toLowerCase();
+  const found = [];
+  const yesterday = new Date(today.getTime() - DAY_MS);
+  const push = (type, value, date, note) => found.push({ type, value: clamp(Math.round(value),0,10), date: date || today, note });
+  if (/period|bleeding|spotting/.test(t)) push('bleeding', 8, yesterday, 'started yesterday');
+  if (/exhaust|so tired|tired|fatigue/.test(t)) push('fatigue', 7, today);
+  if (/back (hurt|pain|ache)/.test(t)) push('backPain', 6, today);
+  if (/cramp/.test(t)) push('cramps', 6, today);
+  if (/slept badly|sleep(t)? (was )?bad|insomnia|didn'?t sleep|poor sleep/.test(t)) push('sleep', 3, today);
+  if (/emotional|sensitive|moody|weepy/.test(t)) push('sensitivity', 7, today);
+  if (/irritab|snapp(y|ed)/.test(t)) push('irritability', 6, today);
+  if (/headache|migraine/.test(t)) push('headache', 6, today);
+  if (/bloat/.test(t)) push('bloating', 5, today);
+  if (/anxious|anxiety/.test(t)) push('anxiety', 6, today);
+  if (/stress/.test(t)) push('stress', 6, today);
+  if (/happy|good|great|joy(ful)?/.test(t)) push('joy', 6, today);
+  if (/energetic|full of energy|energized/.test(t)) push('energy', 7, today);
+  if (/pelvic pain|pelvis/.test(t)) push('pelvicPain', 7, today);
+  if (/overwhelm/.test(t)) push('overwhelm', 6, today);
+  if (found.length === 0) {
+    const negWords = (t.match(/tired|bad|pain|sad|hurt|stress|anxious|low|awful|terrible/g) || []).length;
+    const posWords = (t.match(/good|great|happy|fine|okay|calm|well/g) || []).length;
+    push(posWords >= negWords ? 'joy' : 'sensitivity', 5, today, 'inferred from overall tone');
+  }
+  return found;
+}
+
+/* ---------- 5. runtime state ---------- */
+const RANGE_DAYS = { today: 1, week: 7, month: 30, '3m': 90, '6m': 999 };
+const RANGE_ORDER = ['today','week','month','3m','6m'];
+const state = {
+  range: 'today',
+  nodes: [],                 // ConstellationNode | CareNode
+  revealedKeys: new Set(),
+  hover: null, hoverCluster: null,
+  relationships: new Map(),  // pairKey → count within the visible range
+  careLinks: new Map(),      // care node → symptom nodes it was reached for (same day)
+  carePatterns: [],          // recurring (activity → symptoms) with feedback
+  patternQueue: [], seenPatterns: new Set(), patternPending: null, patternRevealActive: false, activePattern: null,
+  liveToday: {},             // symptoms added live today (feeds patterns + signature)
+  careFocus: false,
+  communityOpen: false, clusters: [], clusterSprites: [], myClusterId: null, privacy: null,
+  camera: { x:0, y:0, scale:1 }, cameraTarget: { x:0, y:0, scale:1 },
+};
+
+// Records the pattern engine sees: seeded history plus whatever was added live today.
+function currentRecords() {
+  const recs = history.slice();
+  const liveTypes = Object.keys(state.liveToday);
+  if (liveTypes.length) {
+    const cycleDay = Math.round((today - persona.cycles[persona.cycles.length-1].start) / DAY_MS) + 1;
+    recs.push({ date: today, cycleIndex: persona.cycles.length-1, cycleDay, length: 28, phase: E.phaseForCycleDay(cycleDay, 28), symptoms: { ...state.liveToday } });
+  }
+  return recs;
+}
+function visibleRecords() {
+  const cutoff = new Date(today.getTime() - RANGE_DAYS[state.range] * DAY_MS);
+  return currentRecords().filter(r => r.date >= cutoff);
+}
+
+function keyFor(type, date) { return type + '@' + date.getTime(); }
+function addNode(type, value, date, meta) {
+  const key = keyFor(type, date);
+  if (state.revealedKeys.has(key)) return null;
+  state.revealedKeys.add(key);
+  const node = new ConstellationNode(new Symptom(type, value, date, meta || {}));
+  node.bornAt = performance.now();
+  state.nodes.push(node);
+  if (date.getTime() === today.getTime()) state.liveToday[type] = value;
+  return node;
+}
+function addCareNode(action) {
+  const key = 'care@' + action.id;
+  if (state.revealedKeys.has(key)) return null;
+  state.revealedKeys.add(key);
+  const node = new CareNode(action);
+  node.bornAt = performance.now();
+  state.nodes.push(node);
+  showEl(careToggleEl);
+  refreshRelationships();
+  return node;
+}
+function revealHistoryUpTo(days) {
+  const cutoff = new Date(today.getTime() - days * DAY_MS);
+  history.forEach(rec => {
+    if (rec.date < cutoff) return;
+    Object.entries(rec.symptoms).forEach(([type, value]) => addNode(type, value, rec.date, { cycleDay: rec.cycleDay, phase: rec.phase }));
+  });
+  [...persona.careActions, ...CareStore.actions].forEach(a => { if (a.timestamp >= cutoff.getTime()) addCareNode(a); });
+  refreshRelationships();
+}
+// Same co-occurrence computation that feeds the pattern engine feeds the visible threads.
+function allCareActions() { return [...persona.careActions, ...CareStore.actions]; }
+function refreshRelationships() {
+  const co = E.computeCoOccurrence(visibleRecords());
+  state.relationships = new Map();
+  co.forEach((e, k) => { if (e.count >= 2) state.relationships.set(k, e.count); });
+  // care ↔ symptom: each care node links to the symptom nodes of its day it was reached for
+  const links = E.linkCareToRecords(allCareActions(), currentRecords());
+  const byDay = new Map();
+  state.nodes.forEach(n => { if (n.kind !== 'symptom') return; if (!byDay.has(n.dayKey)) byDay.set(n.dayKey, []); byDay.get(n.dayKey).push(n); });
+  state.careLinks = new Map();
+  state.nodes.forEach(n => {
+    if (n.kind !== 'care') return;
+    const l = links.get(n.action.id); const sameDay = byDay.get(n.dayKey) || [];
+    let targets = l ? sameDay.filter(m => l.types.includes(m.symptom.type)) : [];
+    if (!targets.length) targets = sameDay.filter(m => m.isDifficult);   // reached for "the day", not one signal
+    state.careLinks.set(n, targets);
+  });
+  state.carePatterns = E.detectCarePatterns(allCareActions(), currentRecords());
+  state.nodes.forEach(n => { n._careLinked = false; });
+  state.careLinks.forEach(targets => targets.forEach(t => { t._careLinked = true; }));
+}
+const pairKey = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
+
+/* ---------- 6. care store: persistent across sessions (server) with device-local fallback ---------- */
+const CareStore = {
+  deviceId: null, remote: false, actions: [], base: '',
+  async init() {
+    let id = localStorage.getItem('shape.deviceId');
+    if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).slice(2, 12)); localStorage.setItem('shape.deviceId', id); }
+    this.deviceId = id;
+    this.base = location.protocol.startsWith('http') ? '' : 'http://localhost:4177';
+    try {
+      const r = await fetch(`${this.base}/api/me?deviceId=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(1500) });
+      if (!r.ok) throw new Error('bad status');
+      const data = await r.json();
+      this.remote = true; this.actions = data.careActions || [];
+    } catch {
+      this.remote = false;
+      try { this.actions = JSON.parse(localStorage.getItem('shape.care') || '[]'); } catch { this.actions = []; }
+    }
+    this.actions.forEach(a => { a.synthetic = false; });
+    this.renderBadge();
+    return this;
+  },
+  renderBadge() {
+    const b = document.getElementById('storeBadge');
+    b.classList.toggle('online', this.remote);
+    b.innerHTML = this.remote
+      ? `<span class="dot"></span><b>Synced</b> · care actions persist to your anonymous device id`
+      : `<span class="dot"></span><b>Local only</b> · care actions saved on this device (server not reachable)`;
+  },
+  persistLocal() { localStorage.setItem('shape.care', JSON.stringify(this.actions)); },
+  async add({ activity, triggerContext }) {
+    const action = E.makeCareAction({ userId: this.deviceId, activity, triggerContext, timestamp: Date.now(), feedback: null });
+    this.actions.push(action);
+    if (this.remote) {
+      try {
+        const r = await fetch(`${this.base}/api/care`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: this.deviceId, action }) });
+        const data = await r.json(); Object.assign(action, data.action);
+      } catch { this.remote = false; this.renderBadge(); this.persistLocal(); }
+    } else this.persistLocal();
+    return action;
+  },
+  async feedback(action, fb) {
+    action.feedback = fb;
+    if (this.remote) {
+      try { await fetch(`${this.base}/api/care/${encodeURIComponent(action.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: this.deviceId, feedback: fb }) }); }
+      catch { this.remote = false; this.renderBadge(); this.persistLocal(); }
+    } else this.persistLocal();
+  },
+  // Only the aggregate signature leaves the device; raw observations never do.
+  signature() {
+    return E.buildSignature({ anonymizedId: this.deviceId, history: currentRecords(), careActions: [...persona.careActions, ...this.actions] });
+  },
+  async clusters() {
+    const sig = this.signature();
+    if (this.remote) {
+      try {
+        await fetch(`${this.base}/api/signature`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: this.deviceId, signature: sig }) });
+        const r = await fetch(`${this.base}/api/clusters?deviceId=${encodeURIComponent(this.deviceId)}`);
+        if (r.ok) return await r.json();
+      } catch { this.remote = false; this.renderBadge(); }
+    }
+    // Local fallback: same engine, synthetic population only, same k floor.
+    const pop = E.generatePopulation({ today }).map(p => E.buildSignature({ anonymizedId: p.anonymizedId, history: p.persona.history, careActions: p.persona.careActions }));
+    const { clusters, membership, k, dropped } = E.clusterSignatures([...pop, sig], { k: 5 });
+    return { clusters: E.rankClustersFor(sig, clusters), myClusterId: membership[sig.anonymizedId] || null, k, droppedBelowFloor: dropped, poolSize: pop.length + 1, realCount: 1, local: true };
+  },
+};
+
+/* ---------- 7. renderer ---------- */
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+let mouse = { x:-9999, y:-9999 };
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = window.innerWidth * DPR; canvas.height = window.innerHeight * DPR;
+  canvas.style.width = window.innerWidth + 'px'; canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  Layout.resize(window.innerWidth, window.innerHeight);
+  layoutClusterSprites();
+}
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+canvas.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; hideTooltip(); });
+
+function toWorld(sx, sy) {
+  return { x: (sx - Layout.cx)/state.camera.scale + Layout.cx + state.camera.x, y: (sy - Layout.cy)/state.camera.scale + Layout.cy + state.camera.y };
+}
+function toScreen(wx, wy) {
+  return { x: Layout.cx + (wx - Layout.cx - state.camera.x)*state.camera.scale, y: Layout.cy + (wy - Layout.cy - state.camera.y)*state.camera.scale };
+}
+
+// Every node eases toward its target instead of jumping: that's the organic feel.
+function computeXY(node, t, worldMouse) {
+  const region = Layout.centers[node.domain];
+  const floatX = Math.cos(t*node.floatSpeed + node.phase) * node.floatAmp;
+  const floatY = Math.sin(t*node.floatSpeed*0.8 + node.phase*1.3) * node.floatAmp;
+  let x = region.x + Math.cos(node.baseAngle)*node.baseRadius + floatX;
+  let y = region.y + Math.sin(node.baseAngle)*node.baseRadius + floatY;
+  const dx = x - worldMouse.x, dy = y - worldMouse.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 120) { const push = (120 - dist)/120 * 6; x += (dx/(dist||1))*push; y += (dy/(dist||1))*push; }
+  if (node.tx === null) { node.tx = x; node.ty = y; }
+  node.tx = lerp(node.tx, x, 0.12); node.ty = lerp(node.ty, y, 0.12);
+  node.x = node.tx; node.y = node.ty;
+}
+function nodeRadius(node) {
+  if (node.kind === 'care') return 5;
+  const v = node.symptom.type === 'sleep' ? (10 - node.symptom.value) : node.symptom.value;
+  return clamp(3 + v*0.85, 3, 11);
+}
+function curve(a, b, now, seed) {
+  const mx = (a.x+b.x)/2 + Math.sin(now*0.0006 + seed)*10;
+  const my = (a.y+b.y)/2 + Math.cos(now*0.0006 + seed)*10;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(mx, my, b.x, b.y); ctx.stroke();
+}
+
+// Persistent threads: recurring same-day co-occurrences within the visible range.
+function drawRelationshipThreads(now) {
+  if (!state.relationships.size) return;
+  const byDay = new Map();
+  state.nodes.forEach(n => { if (n.kind !== 'symptom') return; const k = n.date.getTime(); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(n); });
+  ctx.lineWidth = 0.7;
+  byDay.forEach(list => {
+    for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++) {
+      const a = list[i], b = list[j];
+      const count = state.relationships.get(pairKey(a.symptom.type, b.symptom.type));
+      if (!count) continue;
+      if (!meetsCondition({ symptoms: { [a.symptom.type]: a.symptom.value } }, a.symptom.type)) continue;
+      if (!meetsCondition({ symptoms: { [b.symptom.type]: b.symptom.value } }, b.symptom.type)) continue;
+      const alpha = clamp(0.04 + count*0.03, 0.05, 0.2);
+      const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+      grad.addColorStop(0, colorFor(a, alpha)); grad.addColorStop(1, colorFor(b, alpha));
+      ctx.strokeStyle = grad; curve(a, b, now, i + j);
+    }
+  });
+}
+// Care threads: what each care action was reached for. Filled/bright when it helped,
+// faint when unrated, dashed when it didn't. Always visible: care is never an island.
+function drawCareThreads(now) {
+  if (!state.careLinks.size) return;
+  const focusBoost = state.careFocus ? 1.8 : 1;
+  const hi = state.activePattern && state.activePattern.id.startsWith('care:') && state.patternRevealActive ? state.activePattern : null;
+  state.careLinks.forEach((targets, c) => {
+    const fb = c.action.feedback;
+    const inHi = hi && hi.actionIds.includes(c.action.id);
+    const alpha = clamp((fb === 'helped' ? 0.22 : fb === 'not-helped' ? 0.08 : 0.12) * focusBoost * (inHi ? 2.4 : 1), 0.06, 0.6);
+    ctx.save();
+    ctx.lineWidth = inHi ? 1.3 : 0.8;
+    if (fb === 'not-helped') ctx.setLineDash([3, 6]);
+    targets.forEach((t, i) => {
+      if (inHi && !hi.symptomTypes.includes(t.symptom.type)) return;
+      const grad = ctx.createLinearGradient(c.x, c.y, t.x, t.y);
+      grad.addColorStop(0, `hsla(158, 34%, 68%, ${alpha})`); grad.addColorStop(1, colorFor(t, alpha * 0.8));
+      ctx.strokeStyle = grad; curve(c, t, now, i + 7);
+    });
+    ctx.restore();
+  });
+}
+// Pattern threads: the active insight, brighter while "Show me" is running.
+function drawPatternThreads(now) {
+  const p = state.activePattern;
+  if (!p || !p.types) return;   // care patterns draw their own threads (drawCareThreads)
+  const visible = state.nodes.filter(n => n.kind === 'symptom' && p.types.includes(n.symptom.type) && p.days.some(d => d.date.getTime() === n.date.getTime()));
+  if (visible.length < 2) return;
+  const active = state.patternRevealActive;
+  ctx.lineWidth = active ? 1.4 : 0.6;
+  for (let i = 0; i < visible.length; i++) for (let j = i+1; j < visible.length; j++) {
+    const a = visible[i], b = visible[j];
+    if (a.date.getTime() !== b.date.getTime()) continue;
+    const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+    const alpha = active ? 0.55 : 0.12;
+    grad.addColorStop(0, colorFor(a, alpha)); grad.addColorStop(1, colorFor(b, alpha));
+    ctx.strokeStyle = grad; curve(a, b, now, i*3 + j);
+  }
+}
+// Hover threads: everything reported the same day as the hovered node, no history needed.
+function drawHoverThreads(now) {
+  const h = state.hover;
+  if (!h) return;
+  const k = h.dayKey;
+  ctx.lineWidth = 0.9;
+  state.nodes.forEach(n => {
+    if (n === h || n.dayKey !== k) return;
+    const grad = ctx.createLinearGradient(h.x, h.y, n.x, n.y);
+    grad.addColorStop(0, colorFor(h, 0.5)); grad.addColorStop(1, colorFor(n, 0.35));
+    ctx.strokeStyle = grad; curve(h, n, now, 1);
+  });
+}
+
+function drawRegionLabels() {
+  ctx.save();
+  ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = 'center';
+  REGION_ORDER.forEach(dom => {
+    const c = Layout.centers[dom];
+    const has = state.nodes.some(n => n.domain === dom);
+    ctx.fillStyle = has ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.10)';
+    ctx.fillText(REGION_LABELS[dom].toUpperCase(), c.x, c.y - Layout.R*0.5 - 6);
+  });
+  const care = state.nodes.some(n => n.kind === 'care');
+  if (care) {
+    const c = Layout.centers[Domain.CARE];
+    ctx.fillStyle = state.careFocus ? 'rgba(160,220,190,0.6)' : 'rgba(160,220,190,0.28)';
+    if (!state.careFocus) { ctx.textAlign = 'right'; ctx.fillText('CARE', c.x - Layout.careR - 30, c.y + 4); ctx.textAlign = 'center'; }
+    if (state.careFocus) {
+      // modality sectors, only while looking at "what I've tried": spatial, not a list
+      ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+      ctx.fillStyle = 'rgba(160,220,190,0.4)';
+      E.CARE_MODALITIES.forEach((m, i) => {
+        if (!state.nodes.some(n => n.kind === 'care' && n.action.modality === m)) return;
+        const a = (i / E.CARE_MODALITIES.length) * Math.PI*2;
+        ctx.fillText(m.replace('-', ' '), c.x + Math.cos(a)*(Layout.careR + 26), c.y + Math.sin(a)*(Layout.careR + 26) + 3);
+      });
+    }
+  }
+  ctx.restore();
+}
+
+/* --- distant constellations: SimilarityCluster → mini shape (aggregate only) --- */
+function layoutClusterSprites() {
+  const spots = [ [0.10,0.17], [0.90,0.15], [0.91,0.52], [0.09,0.55] ];
+  state.clusterSprites = state.clusters.slice(0, 4).map((c, i) => {
+    const cx = spots[i][0]*Layout.w, cy = spots[i][1]*Layout.h;
+    const R = 34 + Math.min(c.memberCount, 30) * 0.9;
+    const dots = [];
+    const weights = c.representativeShape.domainWeight;
+    // filler dots per domain weight (shape), then one bright dot per shared-pattern type (links)
+    const total = 8 + Math.min(c.memberCount, 30) / 2;
+    const domIdx = {}; REGION_ORDER.forEach((d, k) => { domIdx[d] = k; });
+    const rng = E.makeRng(E.hashId(c.clusterId).length * 131 + i);
+    Object.entries(weights).forEach(([dom, w]) => {
+      const n = Math.max(1, Math.round(w * total));
+      const base = (domIdx[dom] / REGION_ORDER.length) * Math.PI*2;
+      for (let k = 0; k < n; k++) dots.push({ a: base + rng.rr(-0.5, 0.5), r: rng.rr(0.3, 1) * R, bright: false, sp: rng.rr(0.3, 0.8), ph: rng.rr(0, 6) });
+    });
+    const links = c.topSharedPattern.map(t => {
+      const base = (domIdx[SYMPTOM_DEFS[t].domain] / REGION_ORDER.length) * Math.PI*2;
+      const d = { a: base + rng.rr(-0.35, 0.35), r: rng.rr(0.35, 0.8) * R, bright: true, sp: rng.rr(0.3, 0.6), ph: rng.rr(0, 6) };
+      dots.push(d); return d;
+    });
+    const mine = c.clusterId === state.myClusterId;
+    const tier = mine || c.similarity >= 0.6 ? 'patterns close to yours' : c.similarity >= 0.3 ? 'partly similar patterns' : 'a different rhythm';
+    return { cluster: c, cx, cy, R, dots, links, label: `${c.memberCount} people · ${tier}`, mine };
+  });
+}
+function drawClusters(now) {
+  if (!state.communityOpen) return;
+  ctx.save();
+  ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = 'center';
+  state.clusterSprites.forEach(s => {
+    const hot = state.hoverCluster === s;
+    const alpha = hot ? 0.4 : s.mine ? 0.28 : 0.2;
+    const t = now*0.00012;
+    s.dots.forEach(d => {
+      const wob = Math.sin(t*d.sp*4 + d.ph) * 3;
+      d.x = s.cx + Math.cos(d.a + t*0.3)*d.r + wob; d.y = s.cy + Math.sin(d.a + t*0.3)*d.r - wob;
+    });
+    ctx.strokeStyle = `rgba(200,210,225,${alpha*0.6})`; ctx.lineWidth = 0.6;
+    for (let i = 0; i < s.links.length; i++) for (let j = i+1; j < s.links.length; j++) { ctx.beginPath(); ctx.moveTo(s.links[i].x, s.links[i].y); ctx.lineTo(s.links[j].x, s.links[j].y); ctx.stroke(); }
+    s.dots.forEach(d => {
+      ctx.beginPath(); ctx.fillStyle = d.bright ? `rgba(225,232,245,${alpha*2.2})` : `rgba(200,205,220,${alpha})`;
+      ctx.arc(d.x, d.y, d.bright ? 2.2 : 1.5, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.fillStyle = `rgba(210,215,230,${hot ? 0.75 : 0.42})`;
+    ctx.fillText(s.label, s.cx, s.cy + s.R + 16);
+    if (s.mine) { ctx.fillStyle = 'rgba(210,215,230,0.3)'; ctx.fillText('includes you', s.cx, s.cy + s.R + 30); }
+  });
+  ctx.restore();
+}
+
+function draw(ts) {
+  const now = ts || 0, t = now/1000;
+  ctx.clearRect(0,0,Layout.w,Layout.h);
+  state.camera.x = lerp(state.camera.x, state.cameraTarget.x, 0.06);
+  state.camera.y = lerp(state.camera.y, state.cameraTarget.y, 0.06);
+  state.camera.scale = lerp(state.camera.scale, state.cameraTarget.scale, 0.06);
+
+  ctx.save();
+  ctx.translate(Layout.cx, Layout.cy); ctx.scale(state.camera.scale, state.camera.scale); ctx.translate(-Layout.cx - state.camera.x, -Layout.cy - state.camera.y);
+
+  drawRegionLabels();
+  drawClusters(now);
+  const worldMouse = toWorld(mouse.x, mouse.y);
+  state.nodes.forEach(n => computeXY(n, t, worldMouse));
+  drawRelationshipThreads(now);
+  drawCareThreads(now);
+  drawPatternThreads(now);
+  drawHoverThreads(now);
+
+  let hovered = null, hoverDist = 22/state.camera.scale;
+  state.nodes.forEach(node => {
+    const age = node.bornAt ? (performance.now() - node.bornAt) : 99999;
+    const pulseT = clamp(age/1400, 0, 1);
+    const pulse = age < 1400 ? (1 + (1-pulseT)*0.9) : 1;
+    const r = nodeRadius(node) * pulse;
+    const baseAlpha = age < 1400 ? lerp(0.2, 1, pulseT) : 1;
+    const isHi = node.highlighted && performance.now() < node.highlightUntil;
+    const dim = state.careFocus && node.kind !== 'care' ? (node._careLinked ? 0.8 : 0.3) : 1;
+
+    ctx.save();
+    ctx.shadowBlur = isHi ? r*5.5 : r*3.2;
+    ctx.shadowColor = colorFor(node, (isHi ? 0.9 : 0.55) * dim);
+    ctx.beginPath();
+    if (node.kind === 'care' && node.action.feedback !== 'helped') {
+      // tried but not (yet) reported as helping: an open ring
+      ctx.strokeStyle = colorFor(node, baseAlpha * 0.9); ctx.lineWidth = 1.2; ctx.arc(node.x, node.y, r, 0, Math.PI*2); ctx.stroke();
+    } else {
+      ctx.fillStyle = colorFor(node, baseAlpha * (isHi ? 1 : 0.88) * dim); ctx.arc(node.x, node.y, r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+
+    if (isHi) {
+      ctx.save(); ctx.strokeStyle = 'rgba(240,190,110,0.65)'; ctx.lineWidth = 1.4; ctx.beginPath();
+      ctx.arc(node.x, node.y, r + 6 + Math.sin(now*0.005)*2, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+    }
+    const d = Math.hypot(node.x - worldMouse.x, node.y - worldMouse.y);
+    if (d < hoverDist) { hoverDist = d; hovered = node; }
+  });
+  ctx.restore();
+
+  state.hover = hovered;
+  state.hoverCluster = null;
+  if (!hovered && state.communityOpen) {
+    state.clusterSprites.forEach(s => { if (Math.hypot(s.cx - worldMouse.x, s.cy - worldMouse.y) < s.R + 10) state.hoverCluster = s; });
+  }
+  updateTooltip();
+  requestAnimationFrame(draw);
+}
+
+/* ---------- 8. tooltip ---------- */
+const tooltipEl = document.getElementById('tooltip');
+function hideTooltip(){ tooltipEl.classList.remove('show'); }
+function fmtDate(d) { return d.toLocaleDateString(undefined, { month:'short', day:'numeric' }); }
+function updateTooltip() {
+  const n = state.hover;
+  if (!n) {
+    if (state.hoverCluster) {
+      canvas.style.cursor = 'pointer';
+      const s = state.hoverCluster;
+      tooltipEl.innerHTML = `<div>${s.label}</div><div class="t2">Aggregate only · click for what this group shares</div>`;
+      tooltipEl.style.left = s.cx + 'px'; tooltipEl.style.top = (s.cy - s.R) + 'px'; tooltipEl.classList.add('show');
+      return;
+    }
+    hideTooltip(); canvas.style.cursor = 'default'; return;
+  }
+  canvas.style.cursor = 'pointer';
+  if (n.kind === 'care') {
+    const a = n.action, def = CARE_ACTIVITIES[a.activity];
+    const fb = a.feedback === 'helped' ? 'you said it helped' : a.feedback === 'not-helped' ? "you said it didn't" : 'no feedback yet';
+    const forWhat = (state.careLinks.get(n) || []).slice(0, 2).map(t => labelFor(t.symptom.type));
+    tooltipEl.innerHTML = `<div>${def.label}${forWhat.length ? ' · for ' + forWhat.join(', ') : ''}</div><div class="t2">${fmtDate(n.date)} · ${fb}${a.synthetic ? ' · synthetic' : ''}</div>`;
+  } else {
+    const valueLabel = n.symptom.type === 'sleep' ? `${n.symptom.value}/10 quality` : `${n.symptom.value}/10`;
+    tooltipEl.innerHTML = `<div>${n.symptom.def.label} · ${valueLabel}</div><div class="t2">${fmtDate(n.date)}${n.symptom.phase ? ' · ' + n.symptom.phase : ''}</div>`;
+  }
+  const p = toScreen(n.x, n.y);
+  tooltipEl.style.left = p.x + 'px'; tooltipEl.style.top = p.y + 'px';
+  tooltipEl.classList.add('show');
+}
+
+/* ---------- 9. coach: a presence, not a chat ---------- */
+const coachLine = document.getElementById('coachLine');
+let coachTimer = null;
+const Coach = {
+  say(text, { hold = 0 } = {}) {
+    clearTimeout(coachTimer);
+    coachLine.classList.remove('show');
+    setTimeout(() => { coachLine.textContent = text; coachLine.classList.add('show'); }, 320);
+    if (hold) coachTimer = setTimeout(() => coachLine.classList.remove('show'), hold);
+  },
+  reflectCare() {
+    const cycleStart = persona.cycles[persona.cycles.length-1].start.getTime();
+    const since = Math.min(cycleStart, today.getTime() - 30 * DAY_MS);
+    const c = state.carePatterns.find(x => x.helped >= 2);
+    if (c) { const r = { kind: 'helped', text: buildCareInsight(c).body }; this.say(r.text, { hold: 12000 }); return r; }
+    const r = E.careReflection(allCareActions(), { since });
+    if (r) this.say(r.text, { hold: 12000 });
+    return r;
+  },
+};
+
+/* ---------- 10. UI wiring ---------- */
+const $ = sel => document.querySelector(sel);
+const landing = $('#landing'), checkin = $('#checkin'), timeline = $('#timeline'), tlHint = $('#tlHint');
+const patternAlert = $('#patternAlert'), communityEl = $('#community'), careToggleEl = $('#careToggle'), scrim = $('#scrim');
+function showEl(el){ el.classList.add('show'); }
+function hideEl(el){ el.classList.remove('show'); }
+function openModal(id) { showEl(scrim); showEl(document.getElementById(id)); }
+function closeModals() { hideEl(scrim); document.querySelectorAll('.modal').forEach(hideEl); }
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
+scrim.addEventListener('click', closeModals);
+
+function enterMainView() {
+  hideEl(landing); showEl(timeline);
+  setTimeout(() => showEl(tlHint), 500); setTimeout(() => hideEl(tlHint), 5500);
+  Coach.say('Scrub through time whenever you want. The picture widens on its own.', { hold: 9000 });
+}
+$('#btnExplore').addEventListener('click', enterMainView);
+$('#btnType').addEventListener('click', () => openCheckin(false));
+$('#btnTalk').addEventListener('click', () => openCheckin(true));
+
+const EXAMPLE_TEXT = "My period started yesterday. I'm exhausted today and my lower back hurts. I slept badly and I'm feeling unusually emotional.";
+function openCheckin(isTalk) {
+  hideEl(landing); showEl(checkin);
+  const ta = $('#checkinText'), mic = $('#micRow');
+  ta.value = '';
+  if (isTalk) {
+    mic.style.display = 'flex'; ta.placeholder = 'Listening…'; ta.disabled = true;
+    setTimeout(() => { mic.style.display = 'none'; ta.disabled = false; ta.value = EXAMPLE_TEXT; ta.placeholder = ''; }, 1300);
+  } else { mic.style.display = 'none'; ta.disabled = false; ta.focus(); }
+  Coach.say("A few words are enough. I'll pick out the signals.", { hold: 8000 });
+}
+$('#btnExample').addEventListener('click', () => { $('#checkinText').value = EXAMPLE_TEXT; });
+$('#btnCancelCheckin').addEventListener('click', () => { hideEl(checkin); showEl(landing); });
+$('#btnSubmitCheckin').addEventListener('click', () => {
+  const text = $('#checkinText').value.trim();
+  if (!text) return;
+  hideEl(checkin); runExtraction(text);
+});
+
+/* --- extraction: text → chips → fly into the constellation --- */
+const extractLayer = $('#extractLayer');
+function runExtraction(text) {
+  const signals = parseCheckIn(text);
+  const chips = [];
+  signals.forEach((sig, i) => {
+    const el = document.createElement('div');
+    el.className = 'chip';
+    const color = colorForType(sig.type, sig.value);
+    el.innerHTML = `<span class="dot" style="background:${color}; box-shadow:0 0 8px ${color}"></span>${chipLabel(sig)}`;
+    extractLayer.appendChild(el); chips.push({ el, sig });
+    setTimeout(() => el.classList.add('in'), 120 + i*260);
+  });
+  setTimeout(() => {
+    enterMainView();
+    chips.forEach(({el, sig}, i) => {
+      setTimeout(() => {
+        const rect = el.getBoundingClientRect();
+        el.style.left = (rect.left + rect.width/2) + 'px'; el.style.top = (rect.top + rect.height/2) + 'px';
+        el.classList.add('fly');
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const region = Layout.centers[SYMPTOM_DEFS[sig.type].domain];
+          el.style.left = region.x + 'px'; el.style.top = region.y + 'px';
+        }));
+        setTimeout(() => { addNode(sig.type, sig.value, sig.date, { note: sig.note }); el.remove(); refreshRelationships(); }, 900);
+      }, i*180);
+    });
+  }, 500 + signals.length*260);
+}
+function colorForType(type, value) { return colorFor({ kind:'symptom', symptom: { def: SYMPTOM_DEFS[type], type, value } }, 0.95); }
+function chipLabel(sig) {
+  if (sig.type === 'bleeding') return 'Bleeding (started yesterday)';
+  if (sig.type === 'sleep') return 'Sleep quality: poor';
+  return `${SYMPTOM_DEFS[sig.type].label}: ${sig.value}/10`;
+}
+
+/* --- timeline scrubber --- */
+const tlThumb = $('#tlThumb');
+const steps = Array.from(document.querySelectorAll('.tl-step'));
+function layoutThumb() {
+  const idx = RANGE_ORDER.indexOf(state.range), btn = steps[idx];
+  tlThumb.style.width = btn.offsetWidth + 'px';
+  tlThumb.style.transform = `translateX(${btn.offsetLeft - 5}px)`;
+  steps.forEach((s,i) => s.classList.toggle('active', i === idx));
+}
+steps.forEach(btn => btn.addEventListener('click', () => setRange(btn.dataset.range)));
+function setRange(range) {
+  if (state.range === range) return;
+  state.range = range; layoutThumb();
+  revealHistoryUpTo(RANGE_DAYS[range]);
+  if (RANGE_ORDER.indexOf(range) >= 2) queuePatterns();
+  if (RANGE_ORDER.indexOf(range) >= 3 && !state.communityOpen) setTimeout(() => showEl(communityEl), 1400);
+}
+window.addEventListener('load', layoutThumb);
+
+/* --- patterns: one at a time, never two in a row --- */
+function queuePatterns() {
+  if (state.patternPending) return;
+  const all = E.detectAllPatterns(currentRecords());
+  let next = all.find(p => !state.seenPatterns.has(p.id) && ![...state.seenPatterns].some(seen => p.types.every(t => seen.split('+').includes(t))));
+  // After the first symptom pattern, the next thing worth noticing is what has helped.
+  const care = state.carePatterns.find(c => c.helped >= 2 && !state.seenPatterns.has(c.id));
+  if (care && (!next || state.seenPatterns.size > 0)) next = care;
+  if (!next) return;
+  state.patternPending = next;
+  setTimeout(showPatternAlert, 900);
+}
+function centroidOf(nodes) {
+  if (!nodes.length) return { x: Layout.cx, y: Layout.cy };
+  return { x: nodes.reduce((s,n)=>s+n.x,0)/nodes.length, y: nodes.reduce((s,n)=>s+n.y,0)/nodes.length };
+}
+function nodesFor(pattern) {
+  if (pattern.id.startsWith('care:')) {
+    const careNodes = state.nodes.filter(n => n.kind === 'care' && pattern.actionIds.includes(n.action.id));
+    const linked = careNodes.flatMap(c => (state.careLinks.get(c) || []).filter(t => pattern.symptomTypes.includes(t.symptom.type)));
+    return [...careNodes, ...linked];
+  }
+  return state.nodes.filter(n => n.kind === 'symptom' && pattern.types.includes(n.symptom.type) && pattern.days.some(d => d.date.getTime() === n.date.getTime()));
+}
+function showPatternAlert() {
+  const p = state.patternPending; if (!p) return;
+  state.activePattern = p;
+  const c = centroidOf(nodesFor(p).length ? nodesFor(p) : state.nodes);
+  patternAlert.style.left = clamp(c.x, 90, window.innerWidth-90) + 'px';
+  patternAlert.style.top = clamp(c.y - 40, 90, window.innerHeight-90) + 'px';
+  patternAlert.style.transform = 'translate(-50%,-50%)';
+  patternAlert.querySelector('span:last-child').textContent = p.id.startsWith('care:') ? 'Something has been helping.' : 'I found something.';
+  showEl(patternAlert);
+  Coach.say(p.id.startsWith('care:') ? "Look at what you've reached for, and what came back." : "There's something in your constellation worth a look.", { hold: 10000 });
+}
+function joinWithAnd(list) {
+  if (list.length <= 1) return list.join('');
+  if (list.length === 2) return list.join(' and ');
+  return list.slice(0,-1).join(', ') + ' and ' + list[list.length-1];
+}
+const labelFor = (type) => type === 'sleep' ? 'poor sleep' : SYMPTOM_DEFS[type].label.toLowerCase();
+const timesWord = (n) => ({ 1: 'once', 2: 'twice', 3: 'three times', 4: 'four times', 5: 'five times' }[n] || n + ' times');
+function buildCareInsight(c) {
+  const def = CARE_ACTIVITIES[c.activity];
+  const withText = c.symptomTypes.length ? ` on days with ${joinWithAnd(c.symptomTypes.map(labelFor))}` : '';
+  const phaseText = c.dominantPhase ? `, mostly in your ${c.dominantPhase} phase` : '';
+  const helpedText = c.helped === c.used ? `every one of the ${c.used} times you reached for it` : `${c.helped} of the ${c.used} times you reached for it`;
+  return { eyebrow: 'Care observed', headline: 'Something has been helping.',
+    body: `You reported that ${def.verb} helped ${helpedText}${withText}${phaseText}.`,
+    caveat: "That's your own report, not a prescription. It might be worth keeping close for similar days." };
+}
+function buildPatternInsight(p) {
+  if (p.id.startsWith('care:')) return buildCareInsight(p);
+  const cyclesText = p.cyclesInvolved.length <= 2 ? 'the last two cycles' : `the last ${p.cyclesInvolved.length} cycles`;
+  return { eyebrow: 'Pattern observed', headline: 'I noticed a pattern.',
+    body: `You reported ${joinWithAnd(p.types.map(labelFor))} together on ${p.days.length} days during ${cyclesText}.`,
+    caveat: "This doesn't necessarily mean they're causally related, but the pattern may be worth watching. Consider discussing it with a healthcare professional." };
+}
+patternAlert.addEventListener('click', () => {
+  hideEl(patternAlert);
+  const p = state.patternPending; if (!p) return;
+  const insight = buildPatternInsight(p);
+  $('#modalPattern .eyebrow').textContent = insight.eyebrow;
+  $('#patHeadline').textContent = insight.headline; $('#patBody').textContent = insight.body; $('#patCaveat').textContent = insight.caveat;
+  openModal('modalPattern');
+  state.seenPatterns.add(p.id); state.patternPending = null;
+  // A different pattern, if any, resurfaces only after a long pause.
+  setTimeout(queuePatterns, 9000);
+});
+$('#btnShowMe').addEventListener('click', () => {
+  closeModals();
+  const p = state.activePattern; if (!p) return;
+  const relevant = nodesFor(p);
+  const until = performance.now() + 5000;
+  relevant.forEach(n => { n.highlighted = true; n.highlightUntil = until; });
+  const c = centroidOf(relevant);
+  state.cameraTarget = { x: c.x - Layout.cx, y: c.y - Layout.cy, scale: 1.5 };
+  state.patternRevealActive = true;
+  setTimeout(() => { state.cameraTarget = { x:0, y:0, scale:1 }; state.patternRevealActive = false; }, 5200);
+});
+
+/* --- node click: difficult → support flow; care → care card; else → light info card --- */
+let activeSupportNode = null;
+canvas.addEventListener('click', () => {
+  const n = state.hover;
+  if (!n) { if (state.hoverCluster) openClusterCard(state.hoverCluster.cluster); return; }
+  if (n.kind === 'care') { showCareCard(n); return; }
+  if (n.domain === Domain.CONTEXT || !n.isDifficult) { showInfoCard(n); return; }
+  openSupportFor(n);
+});
+function showInfoCard(n) {
+  $('#infoEyebrow').textContent = REGION_LABELS[n.domain];
+  $('#infoHeadline').textContent = `${n.symptom.def.label} · ${fmtDate(n.date)}`;
+  const val = n.symptom.type === 'sleep' ? `${n.symptom.value}/10 quality` : `${n.symptom.value}/10`;
+  $('#infoBody').textContent = `Reported at ${val}${n.symptom.phase ? ', during your ' + n.symptom.phase + ' phase' : ''}. Synthetic demo data.`;
+  $('#infoFeedback').style.display = 'none';
+  openModal('modalInfo');
+}
+function showCareCard(n) {
+  const a = n.action, def = CARE_ACTIVITIES[a.activity];
+  $('#infoEyebrow').textContent = 'Care · ' + a.modality.replace('-', ' ');
+  $('#infoHeadline').textContent = `${def.label} · ${fmtDate(n.date)}`;
+  const linked = (state.careLinks.get(n) || []).map(t => `${labelFor(t.symptom.type)} ${t.symptom.type === 'sleep' ? t.symptom.value + '/10' : t.symptom.value + '/10'}`);
+  const trig = linked.length ? ` on a day you reported ${joinWithAnd(linked)}` : (a.triggerContext && a.triggerContext.symptomType ? ` after reporting ${labelFor(a.triggerContext.symptomType)}` : '');
+  $('#infoBody').textContent = `You reached for this${trig}.${a.synthetic ? ' Synthetic demo entry.' : ''}`;
+  renderFeedbackRow($('#infoFeedback'), a);
+  openModal('modalInfo');
+}
+// Optional, never required: one quiet row, no streaks, no score.
+function renderFeedbackRow(row, action) {
+  row.style.display = 'flex';
+  const done = !!action.feedback;
+  row.classList.toggle('done', done);
+  if (done) {
+    row.innerHTML = `<span>${action.feedback === 'helped' ? 'You said this helped.' : "You said this didn't help. That's useful to know too."}</span><button class="link-btn" data-fb="clear">Change</button>`;
+  } else {
+    row.innerHTML = `<span>Whenever you like: did it help?</span><button class="small-pill" data-fb="helped">Helped</button><button class="small-pill" data-fb="not-helped">Not really</button><button class="link-btn" data-fb="skip">Skip</button>`;
+  }
+  row.querySelectorAll('[data-fb]').forEach(b => b.addEventListener('click', async () => {
+    const fb = b.dataset.fb;
+    if (fb === 'skip') { closeModals(); return; }
+    if (action.synthetic) { action.feedback = fb === 'clear' ? null : fb; }
+    else await CareStore.feedback(action, fb === 'clear' ? null : fb);
+    renderFeedbackRow(row, action);
+    if (fb === 'helped') setTimeout(() => Coach.reflectCare(), 600);
+  }));
+}
+function openSupportFor(n) {
+  activeSupportNode = n;
+  $('#supTag').textContent = `${n.symptom.def.label} · ${n.symptom.value}/10`;
+  $('#supSwatch').style.background = colorFor(n, 1);
+  openModal('modalSupport');
+  Coach.say('Take what you need. Nothing here is a test.', { hold: 8000 });
+}
+document.querySelectorAll('#modalSupport .option-row').forEach(btn => {
+  btn.addEventListener('click', () => { const need = btn.dataset.need; closeModals(); handleNeed(need, activeSupportNode); });
+});
+
+// Every branch becomes a CareAction: persisted, visible as a care node, optionally rated.
+async function logCare(activity, n) {
+  const action = await CareStore.add({ activity, triggerContext: { symptomType: n ? n.symptom.type : null, patternId: state.activePattern ? state.activePattern.id : null } });
+  addCareNode(action);
+  return action;
+}
+function buildDoctorSummary(type) {
+  const recs = currentRecords();
+  const occurrences = recs.filter(rec => type === 'sleep' ? (rec.symptoms.sleep !== undefined && rec.symptoms.sleep <= 4) : (rec.symptoms[type] !== undefined && rec.symptoms[type] >= 3));
+  const count = occurrences.length;
+  const avg = count ? occurrences.reduce((s,r)=>s+r.symptoms[type],0)/count : 0;
+  const cooccur = {};
+  occurrences.forEach(rec => E.CANDIDATE_TYPES.forEach(t => { if (t !== type && meetsCondition(rec, t)) cooccur[t] = (cooccur[t]||0)+1; }));
+  const topCooccur = Object.entries(cooccur).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([t])=>labelFor(t));
+  const phaseTally = {}; occurrences.forEach(rec => { phaseTally[rec.phase] = (phaseTally[rec.phase]||0)+1; });
+  const topPhase = Object.entries(phaseTally).sort((a,b)=>b[1]-a[1])[0];
+  return { count, avg: avg.toFixed(1), topCooccur, topPhase: topPhase ? topPhase[0] : null, cyclesSpan: completed.length };
+}
+async function handleNeed(need, n) {
+  if (!n) return;
+  const det = { eyebrow: $('#detEyebrow'), head: $('#detHeadline'), body: $('#detBody'), fb: $('#detFeedback') };
+  det.fb.style.display = 'none';
+  if (need === 'understand') {
+    const p = state.activePattern && state.activePattern.types.includes(n.symptom.type) ? state.activePattern : null;
+    det.eyebrow.textContent = 'Understand this'; det.head.textContent = 'What this might mean';
+    const helpedBefore = state.carePatterns.filter(c => c.helped >= 1 && c.symptomTypes.includes(n.symptom.type)).slice(0, 2);
+    const careHtml = helpedBefore.length
+      ? `<p>On days like this before, you reported that ${joinWithAnd(helpedBefore.map(c => `${CARE_ACTIVITIES[c.activity].verb} helped ${timesWord(c.helped)}`))}.</p>`
+      : '';
+    det.body.innerHTML = (p
+      ? `<p>${buildPatternInsight(p).body}</p>`
+      : `<p>${n.symptom.def.label} can have many possible causes and can vary across your cycle. Tracking when it shows up (and what else is happening alongside it) can help you and a healthcare professional spot patterns worth discussing.</p>`)
+      + careHtml + (p ? `<div class="caveat">${buildPatternInsight(p).caveat}</div>` : '');
+    openModal('modalDetail');
+    renderFeedbackRow(det.fb, await logCare('read-pattern', n));
+  } else if (need === 'feel-better') {
+    det.eyebrow.textContent = 'Feel better'; det.head.textContent = 'A few gentle options';
+    const opts = [['slow-breathing','A few minutes of slow breathing'],['warm-compress','A warm compress or heating pad on the area'],['gentle-movement','Slow, gentle movement or stretching'],['rest','Rest, water, and something light to eat'],['write-it-out','Write down what today feels like'],['draw-it','Draw the shape of it, no words']];
+    det.body.innerHTML = `<div class="option-grid">${opts.map(([id, text]) => `<button class="option-row" data-care="${id}"><span>${text}<small>${CARE_ACTIVITIES[id].modality}</small></span><span class="arrow">→</span></button>`).join('')}</div>
+      <div class="caveat">General wellbeing suggestions, not medical treatment. If this feels severe or unusual, please talk to a healthcare professional.</div>`;
+    det.body.querySelectorAll('[data-care]').forEach(b => b.addEventListener('click', async () => {
+      const id = b.dataset.care;
+      det.body.innerHTML = `<p>Noted: ${CARE_ACTIVITIES[id].label.toLowerCase()}. It's in your constellation now, with the rest of what you've reached for.</p>`;
+      renderFeedbackRow(det.fb, await logCare(id, n));
+    }));
+    openModal('modalDetail');
+  } else if (need === 'acknowledge') {
+    det.eyebrow.textContent = 'Acknowledged'; det.head.textContent = 'That sounds like a lot to carry.';
+    det.body.innerHTML = `<p>It's been noted (gently, without judgment). Nothing else to do right now.</p>`;
+    openModal('modalDetail');
+    await logCare('acknowledge', n);
+  } else if (need === 'talk') {
+    openTalk(n);
+  } else if (need === 'doctor') {
+    const s = buildDoctorSummary(n.symptom.type);
+    det.eyebrow.textContent = 'Prepare for my doctor'; det.head.textContent = `${n.symptom.def.label}: summary`;
+    const phaseText = s.topPhase ? `mostly during the <b>${s.topPhase}</b> phase` : 'without a clear phase pattern';
+    const coText = s.topCooccur.length ? joinWithAnd(s.topCooccur) : 'no other symptoms at a notable rate';
+    det.body.innerHTML = `<p>Over the last ${s.cyclesSpan} cycles (synthetic demo data):</p><ul>
+        <li>${n.symptom.def.label} appeared on <b>${s.count}</b> days</li>
+        <li>Average reported intensity: <b>${s.avg}/10</b></li>
+        <li>Frequently co-occurred with: <b>${coText}</b></li>
+        <li>These reports clustered ${phaseText}</li></ul>
+      <div class="caveat">This is a prototype summary generated from synthetic data. It is not a diagnosis. Bring it to a healthcare professional for interpretation.</div>`;
+    openModal('modalDetail');
+    renderFeedbackRow(det.fb, await logCare('doctor-summary', n));
+  }
+}
+
+/* --- talk it through: the coach as an emotional-support presence (Nebius Token Factory, Qwen) --- */
+const Talk = {
+  messages: [], node: null, action: null, busy: false,
+  els: { log: $('#talkLog'), text: $('#talkText'), send: $('#talkSend'), fb: $('#talkFeedback') },
+  reset(n) {
+    this.messages = []; this.node = n || null; this.action = null; this.busy = false;
+    this.els.log.innerHTML = ''; this.els.text.value = ''; this.els.fb.style.display = 'none';
+  },
+  bubble(role, text) {
+    const el = document.createElement('div'); el.className = 'msg ' + role; el.textContent = text;
+    this.els.log.appendChild(el); this.els.log.scrollTop = this.els.log.scrollHeight; return el;
+  },
+  context() {
+    const p = state.activePattern;
+    const r = E.careReflection([...persona.careActions, ...CareStore.actions], { since: today.getTime() - 30 * DAY_MS });
+    return {
+      symptomType: this.node ? labelFor(this.node.symptom.type) : null,
+      patternText: p ? buildPatternInsight(p).body : null,
+      careText: (state.carePatterns.find(c => c.helped >= 2) ? buildCareInsight(state.carePatterns.find(c => c.helped >= 2)).body : null) || (r && r.kind === 'helped' ? r.text : null),
+      phase: this.node && this.node.symptom.phase ? this.node.symptom.phase : null,
+    };
+  },
+  async send() {
+    const text = this.els.text.value.trim();
+    if (!text || this.busy) return;
+    this.els.text.value = '';
+    this.messages.push({ role: 'user', content: text });
+    this.bubble('user', text);
+    if (!this.action) this.action = await logCare('talk-it-through', this.node);   // one care action per conversation
+    this.busy = true;
+    const out = this.bubble('assistant', ''); out.classList.add('typing');
+    let reply = '', sources = [];
+    const render = () => {
+      out.textContent = reply.replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#+\s*/gm, '');   // the model is asked for plain text; strip stray markdown anyway
+      if (sources.length) {
+        const row = document.createElement('div'); row.className = 'sources';
+        sources.forEach(x => { const a = document.createElement('a'); a.href = x.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = x.name || x.url; row.appendChild(a); });
+        out.appendChild(row);
+      }
+      this.els.log.scrollTop = this.els.log.scrollHeight;
+    };
+    try {
+      if (!CareStore.remote) throw new Error('offline');
+      const res = await fetch(`${CareStore.base}/api/support/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId: CareStore.deviceId, messages: this.messages, context: this.context() }) });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'upstream'); }
+      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+      while (true) {
+        const { value, done } = await reader.read(); if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i; while ((i = buf.indexOf('\n\n')) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim(); if (payload === '[DONE]') continue;
+          try {
+            const d = JSON.parse(payload);
+            if (d.delta) { reply += d.delta; render(); }
+            else if (d.status === 'searching') { out.innerHTML = `<span class="status">Looking that up${d.query ? ': ' + d.query.replace(/</g, '&lt;') : ''}…</span>`; }
+            else if (d.sources) { sources = d.sources; }
+          } catch {}
+        }
+      }
+      if (!reply) throw new Error('empty');
+    } catch (err) {
+      reply = err.message === 'missing_key'
+        ? "I can't talk back right now: the server has no model key yet. I'm still here, though. Slow breathing or writing it out are close by if you want them."
+        : "I can't reach the model right now, but I'm still here. If it helps, take one slow breath with me, and tell me a little more.";
+      out.textContent = reply;
+    }
+    if (sources.length) render();
+    out.classList.remove('typing');
+    this.messages.push({ role: 'assistant', content: reply });
+    this.busy = false;
+    if (this.messages.filter(m => m.role === 'assistant').length >= 2 && this.action) renderFeedbackRow(this.els.fb, this.action);
+    this.els.text.focus();
+  },
+};
+function openTalk(n) {
+  Talk.reset(n);
+  const opener = n
+    ? `I'm here. You reported ${labelFor(n.symptom.type)} today. What's it like right now, in your own words?`
+    : "I'm here. Whatever is going on, you can say it however it comes.";
+  Talk.bubble('assistant', opener);
+  Talk.messages.push({ role: 'assistant', content: opener });
+  openModal('modalTalk');
+  Coach.say("I'm listening.", { hold: 6000 });
+  setTimeout(() => Talk.els.text.focus(), 350);
+}
+Talk.els.send.addEventListener('click', () => Talk.send());
+Talk.els.text.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); Talk.send(); } });
+document.querySelector('#coach .orb').addEventListener('click', () => openTalk(null));
+
+/* --- "what I've tried": spatial, not a dashboard. Camera settles on the care region. --- */
+$('#btnCare').addEventListener('click', () => {
+  state.careFocus = !state.careFocus;
+  $('#btnCare').textContent = state.careFocus ? 'Back' : "What I've tried";
+  patternAlert.style.visibility = state.careFocus ? 'hidden' : '';
+  if (state.careFocus) {
+    state.cameraTarget = { x: 0, y: 0, scale: 1.7 };
+    const r = Coach.reflectCare();
+    if (!r) Coach.say('Open rings are things you tried. Filled ones are the ones you said helped.', { hold: 12000 });
+    $('#careText').textContent = 'Open rings: tried. Filled: you said it helped. Grouped by kind of care.';
+  } else {
+    state.cameraTarget = { x: 0, y: 0, scale: 1 };
+    $('#careText').textContent = "What you've reached for lives here too.";
+  }
+});
+
+/* --- community: real clusters, aggregate only, k-floor enforced before render --- */
+$('#btnCommunity').addEventListener('click', async () => {
+  state.communityOpen = !state.communityOpen;
+  communityEl.classList.toggle('expanded', state.communityOpen);
+  $('#btnCommunity').textContent = state.communityOpen ? 'Hide' : 'Explore';
+  if (!state.communityOpen) { $('#communityText').textContent = "You're not the only constellation like this."; return; }
+  $('#communityText').textContent = 'Finding groups with similar self-reported patterns…';
+  const data = await CareStore.clusters();
+  state.clusters = data.clusters || []; state.myClusterId = data.myClusterId; state.privacy = data;
+  layoutClusterSprites();
+  const hidden = data.droppedBelowFloor ? ` ${data.droppedBelowFloor} people were in groups too small to show.` : '';
+  $('#communityText').textContent = `Groups with similar self-reported patterns. Aggregate only, never fewer than ${data.k}.${hidden} Not a shared diagnosis.`;
+  Coach.say('These are groups, never people. Similar self-reported patterns, not diagnoses.', { hold: 10000 });
+});
+function openClusterCard(c) {
+  const mine = c.clusterId === state.myClusterId;
+  $('#clHeadline').textContent = `${c.memberCount} people${mine ? ', including you' : ''}`;
+  const phase = c.representativeShape.dominantPhase;
+  const care = c.topCareActionsThatHelped.length
+    ? `<li>Care this group most often reported as helping: <b>${joinWithAnd(c.topCareActionsThatHelped.map(x => CARE_ACTIVITIES[x.activity].label.toLowerCase()))}</b></li>`
+    : `<li>Not enough shared care reports to show yet.</li>`;
+  $('#clBody').innerHTML = `<ul>
+      <li>Most often reported together: <b>${joinWithAnd(c.topSharedPattern.map(labelFor))}</b></li>
+      <li>Shows up mostly in the <b>${phase}</b> phase</li>
+      ${care}
+    </ul><p>${mine ? 'Your own pattern signature is part of this group. Only the aggregate is shown, to you and to everyone else.' : 'A different group from yours, shown for context only.'}</p>`;
+  openModal('modalCluster');
+}
+
+/* ---------- 11. init ---------- */
+resize();
+requestAnimationFrame(draw);
+Coach.say('Start wherever you are. A word is enough.', { hold: 0 });
+CareStore.init().then(() => {
+  // today's real care actions are always visible; older ones arrive with the time scrubber
+  CareStore.actions.forEach(a => { if (a.timestamp >= today.getTime()) addCareNode(a); });
+});
+</script>
+</body>
+</html>
