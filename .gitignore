@@ -5,7 +5,9 @@
 # Node
 node_modules/
 
-# Server runtime data: device store, salt, env — never committed
-server/data/store.json
-server/data/salt
-server/.env
+# Vercel CLI local link metadata
+.vercel
+
+# Local env
+.env
+.env.local

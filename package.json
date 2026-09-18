@@ -1,0 +1,9 @@
+{
+  "name": "shape",
+  "private": true,
+  "description": "Living constellation visualization for self-reported body/mind signals across the menstrual cycle. Static client + Vercel functions, KV-backed persistence.",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

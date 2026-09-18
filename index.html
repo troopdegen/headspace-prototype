@@ -356,7 +356,7 @@
 'use strict';
 /* =====================================================================================
    SHAPE: client. Rendering + interaction only. Every data computation comes from
-   engine.js (shared with server/server.js), so patterns, signatures and clusters
+   engine.js (shared with the /api functions via lib/engine.mjs), so patterns, signatures and clusters
    are the same code on both sides.
 
    Layers on screen:
@@ -589,7 +589,7 @@ const CareStore = {
     let id = localStorage.getItem('shape.deviceId');
     if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).slice(2, 12)); localStorage.setItem('shape.deviceId', id); }
     this.deviceId = id;
-    this.base = location.protocol.startsWith('http') ? '' : 'http://localhost:4177';
+    this.base = ''; // same-origin: works for `vercel dev` and for the deployed site alike
     try {
       const r = await fetch(`${this.base}/api/me?deviceId=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(1500) });
       if (!r.ok) throw new Error('bad status');
@@ -625,7 +625,7 @@ const CareStore = {
   async feedback(action, fb) {
     action.feedback = fb;
     if (this.remote) {
-      try { await fetch(`${this.base}/api/care/${encodeURIComponent(action.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: this.deviceId, feedback: fb }) }); }
+      try { await fetch(`${this.base}/api/care`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: this.deviceId, actionId: action.id, feedback: fb }) }); }
       catch { this.remote = false; this.renderBadge(); this.persistLocal(); }
     } else this.persistLocal();
   },
